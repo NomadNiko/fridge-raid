@@ -39,7 +39,7 @@ const setItem = async (key: string, value: string): Promise<void> => {
     await AsyncStorage.setItem(key, value);
     // const verify = await AsyncStorage.getItem(key);
     // console.log(`Verified ${key}, got back: ${verify ? verify.length : 'null'}`);
-  } catch (e) {
+  } catch {
     // console.error(`Error setting ${key}:`, e);
   }
 };
