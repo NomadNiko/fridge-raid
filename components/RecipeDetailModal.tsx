@@ -1,0 +1,233 @@
+import { Modal, View, Text, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
+
+type Recipe = {
+  id: number;
+  name: string;
+  description: string;
+  cuisine: string;
+  category: string;
+  difficulty: string;
+  servings: number;
+  prepTime: number;
+  cookTime: number;
+  totalTime: number;
+  rating: number;
+  ingredients: {
+    name: string;
+    amount: number;
+    unit: string;
+    preparation: string | null;
+    optional: boolean;
+  }[];
+  instructions: { step: number; text: string; time: number; equipment: string[] }[];
+  equipment: { id: string; name: string; required: boolean; alternatives: string[] }[];
+  tags: string[];
+  dietaryInfo: { vegetarian: boolean; vegan: boolean; glutenFree: boolean; dairyFree: boolean };
+  nutrition: { calories: number; protein: number; carbs: number; fat: number };
+};
+
+type RecipeDetailModalProps = {
+  visible: boolean;
+  recipe: Recipe | null;
+  isInCollection: boolean;
+  onClose: () => void;
+  onToggleCollection: () => void;
+};
+
+export default function RecipeDetailModal({
+  visible,
+  recipe,
+  isInCollection,
+  onClose,
+  onToggleCollection,
+}: RecipeDetailModalProps) {
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  if (!recipe) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
+      <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff' }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: isDark ? '#1c1c1e' : '#e5e5ea',
+          }}>
+          <TouchableOpacity onPress={onClose}>
+            <Text style={{ color: '#007aff', fontSize: 17 }}>Close</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onToggleCollection}
+            style={{
+              backgroundColor: isInCollection ? '#34c759' : '#007aff',
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 8,
+            }}>
+            <Text style={{ color: '#ffffff', fontWeight: '600' }}>
+              {isInCollection ? '✓ In Collection' : '+ Add to Collection'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 28,
+              fontWeight: 'bold',
+              marginBottom: 8,
+            }}>
+            {recipe.name}
+          </Text>
+          <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 16, marginBottom: 16 }}>
+            {recipe.description}
+          </Text>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+            <View
+              style={{
+                backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8,
+              }}>
+              <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                🍽️ {recipe.servings} servings
+              </Text>
+            </View>
+            <View
+              style={{
+                backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8,
+              }}>
+              <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                ⏱️ {recipe.totalTime} min
+              </Text>
+            </View>
+            <View
+              style={{
+                backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8,
+              }}>
+              <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>📊 {recipe.difficulty}</Text>
+            </View>
+            <View
+              style={{
+                backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8,
+              }}>
+              <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                ⭐ {recipe.rating.toFixed(1)}
+              </Text>
+            </View>
+          </View>
+
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 22,
+              fontWeight: '600',
+              marginBottom: 12,
+            }}>
+            Ingredients
+          </Text>
+          {recipe.ingredients.map((ing, idx) => (
+            <View key={idx} style={{ flexDirection: 'row', marginBottom: 8 }}>
+              <Text style={{ color: isDark ? '#8e8e93' : '#636366', marginRight: 8 }}>•</Text>
+              <Text style={{ color: isDark ? '#ffffff' : '#000000', flex: 1 }}>
+                {ing.amount} {ing.unit} {ing.name}
+                {ing.preparation && `, ${ing.preparation}`}
+                {ing.optional && ' (optional)'}
+              </Text>
+            </View>
+          ))}
+
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 22,
+              fontWeight: '600',
+              marginTop: 24,
+              marginBottom: 12,
+            }}>
+            Instructions
+          </Text>
+          {recipe.instructions.map((inst) => (
+            <View key={inst.step} style={{ marginBottom: 16 }}>
+              <Text
+                style={{
+                  color: isDark ? '#007aff' : '#007aff',
+                  fontWeight: '600',
+                  marginBottom: 4,
+                }}>
+                Step {inst.step}
+              </Text>
+              <Text style={{ color: isDark ? '#ffffff' : '#000000', lineHeight: 22 }}>
+                {inst.text}
+              </Text>
+            </View>
+          ))}
+
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 22,
+              fontWeight: '600',
+              marginTop: 24,
+              marginBottom: 12,
+            }}>
+            Equipment Needed
+          </Text>
+          {recipe.equipment.map((eq) => (
+            <View key={eq.id} style={{ flexDirection: 'row', marginBottom: 8 }}>
+              <Text style={{ color: isDark ? '#8e8e93' : '#636366', marginRight: 8 }}>•</Text>
+              <Text style={{ color: isDark ? '#ffffff' : '#000000', flex: 1 }}>
+                {eq.name}
+                {eq.alternatives.length > 0 && ` (or ${eq.alternatives.join(', ')})`}
+              </Text>
+            </View>
+          ))}
+
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 22,
+              fontWeight: '600',
+              marginTop: 24,
+              marginBottom: 12,
+            }}>
+            Nutrition (per serving)
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Text style={{ color: isDark ? '#8e8e93' : '#636366' }}>
+              Calories: {recipe.nutrition.calories}
+            </Text>
+            <Text style={{ color: isDark ? '#8e8e93' : '#636366' }}>
+              Protein: {recipe.nutrition.protein}g
+            </Text>
+            <Text style={{ color: isDark ? '#8e8e93' : '#636366' }}>
+              Carbs: {recipe.nutrition.carbs}g
+            </Text>
+            <Text style={{ color: isDark ? '#8e8e93' : '#636366' }}>
+              Fat: {recipe.nutrition.fat}g
+            </Text>
+          </View>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
