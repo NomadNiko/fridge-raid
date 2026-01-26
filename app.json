@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Fridge Raid",
-    "slug": "fridgeraid",
+    "slug": "fridge-raid",
     "version": "1.0.0",
     "web": {
       "favicon": "./assets/favicon.png"
@@ -16,7 +16,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "scheme": "fridgeraid",
+    "scheme": "fridge-raid",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
@@ -27,7 +27,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "newArchEnabled": true
+      "newArchEnabled": true,
+      "bundleIdentifier": "com.devnomad.fridgeraid",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -36,6 +40,12 @@
       },
       "package": "com.devnomad.fridgeraid",
       "newArchEnabled": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "797d50f6-2a9a-4efe-994d-c2c03b5f9c78"
+      }
     }
   }
 }
