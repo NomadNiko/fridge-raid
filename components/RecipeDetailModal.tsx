@@ -1,30 +1,8 @@
 import { Modal, View, Text, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
-
-type Recipe = {
-  id: number;
-  name: string;
-  description: string;
-  cuisine: string;
-  category: string;
-  difficulty: string;
-  servings: number;
-  prepTime: number;
-  cookTime: number;
-  totalTime: number;
-  rating: number;
-  ingredients: {
-    name: string;
-    amount: number;
-    unit: string;
-    preparation: string | null;
-    optional: boolean;
-  }[];
-  instructions: { step: number; text: string; time: number; equipment: string[] }[];
-  equipment: { id: string; name: string; required: boolean; alternatives: string[] }[];
-  tags: string[];
-  dietaryInfo: { vegetarian: boolean; vegan: boolean; glutenFree: boolean; dairyFree: boolean };
-  nutrition: { calories: number; protein: number; carbs: number; fat: number };
-};
+import { Recipe } from '../types';
+import { Ionicons } from '@expo/vector-icons';
+import { useState, useEffect } from 'react';
+import { getFridgeWithDetails } from '../lib/storage';
 
 type RecipeDetailModalProps = {
   visible: boolean;
@@ -43,6 +21,16 @@ export default function RecipeDetailModal({
 }: RecipeDetailModalProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const [fridgeIngredients, setFridgeIngredients] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (visible) {
+      getFridgeWithDetails().then((fridge) => {
+        const ingredientNames = fridge.map((item) => item.ingredient?.name.toLowerCase());
+        setFridgeIngredients(ingredientNames);
+      });
+    }
+  }, [visible]);
 
   if (!recipe) return null;
 
@@ -58,11 +46,22 @@ export default function RecipeDetailModal({
             borderBottomWidth: 1,
             borderBottomColor: isDark ? '#1c1c1e' : '#e5e5ea',
           }}>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity
+            onPress={onClose}
+            accessible={true}
+            accessibilityLabel="Close recipe details"
+            accessibilityRole="button">
             <Text style={{ color: '#007aff', fontSize: 17 }}>Close</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onToggleCollection}
+            accessible={true}
+            accessibilityLabel={
+              isInCollection
+                ? `Remove ${recipe.name} from collection`
+                : `Add ${recipe.name} to collection`
+            }
+            accessibilityRole="button"
             style={{
               backgroundColor: isInCollection ? '#34c759' : '#007aff',
               paddingHorizontal: 16,
@@ -143,16 +142,42 @@ export default function RecipeDetailModal({
             }}>
             Ingredients
           </Text>
-          {recipe.ingredients.map((ing, idx) => (
-            <View key={idx} style={{ flexDirection: 'row', marginBottom: 8 }}>
-              <Text style={{ color: isDark ? '#8e8e93' : '#636366', marginRight: 8 }}>•</Text>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', flex: 1 }}>
-                {ing.amount} {ing.unit} {ing.name}
-                {ing.preparation && `, ${ing.preparation}`}
-                {ing.optional && ' (optional)'}
-              </Text>
-            </View>
-          ))}
+          {recipe.ingredients.map(
+            (
+              ing: {
+                name: string;
+                amount: number;
+                unit: string;
+                preparation: string | null;
+                optional: boolean;
+              },
+              idx: number
+            ) => {
+              const hasIngredient = fridgeIngredients.includes(ing.name.toLowerCase());
+              return (
+                <View
+                  key={idx}
+                  style={{ flexDirection: 'row', marginBottom: 8, alignItems: 'center' }}>
+                  {!hasIngredient && (
+                    <Ionicons name="close" size={16} color="#ff3b30" style={{ marginRight: 4 }} />
+                  )}
+                  {hasIngredient && (
+                    <Text style={{ color: isDark ? '#8e8e93' : '#636366', marginRight: 8 }}>•</Text>
+                  )}
+                  <Text
+                    style={{
+                      color: hasIngredient ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
+                      flex: 1,
+                      fontStyle: hasIngredient ? 'normal' : 'italic',
+                    }}>
+                    {ing.amount} {ing.unit} {ing.name}
+                    {ing.preparation && `, ${ing.preparation}`}
+                    {ing.optional && ' (optional)'}
+                  </Text>
+                </View>
+              );
+            }
+          )}
 
           <Text
             style={{
@@ -164,7 +189,7 @@ export default function RecipeDetailModal({
             }}>
             Instructions
           </Text>
-          {recipe.instructions.map((inst) => (
+          {recipe.instructions.map((inst: { step: number; text: string }) => (
             <View key={inst.step} style={{ marginBottom: 16 }}>
               <Text
                 style={{
@@ -190,7 +215,7 @@ export default function RecipeDetailModal({
             }}>
             Equipment Needed
           </Text>
-          {recipe.equipment.map((eq) => (
+          {recipe.equipment.map((eq: { id: string; name: string; alternatives: string[] }) => (
             <View key={eq.id} style={{ flexDirection: 'row', marginBottom: 8 }}>
               <Text style={{ color: isDark ? '#8e8e93' : '#636366', marginRight: 8 }}>•</Text>
               <Text style={{ color: isDark ? '#ffffff' : '#000000', flex: 1 }}>

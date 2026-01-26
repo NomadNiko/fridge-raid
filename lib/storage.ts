@@ -28,54 +28,52 @@ export type UserCollectionItem = {
 const getItem = async (key: string): Promise<string | null> => {
   try {
     return await AsyncStorage.getItem(key);
-  } catch {
+  } catch (e) {
+    console.error(`Storage read error [${key}]:`, e);
     return null;
   }
 };
 
 const setItem = async (key: string, value: string): Promise<void> => {
   try {
-    // console.log(`Setting ${key}, length: ${value.length}`);
     await AsyncStorage.setItem(key, value);
-    // const verify = await AsyncStorage.getItem(key);
-    // console.log(`Verified ${key}, got back: ${verify ? verify.length : 'null'}`);
-  } catch {
-    // console.error(`Error setting ${key}:`, e);
+  } catch (e) {
+    console.error(`Storage write error [${key}]:`, e);
+    throw e;
   }
 };
 
 export const initializeDatabase = async () => {
-  // console.log('Initializing database...');
-  const keys = await AsyncStorage.getAllKeys();
-  // console.log('Existing keys:', keys);
-  if (!keys.includes('recipes')) {
-    // console.log('Setting recipes data');
+  try {
     await setItem('recipes', JSON.stringify(recipesData));
-  }
-  if (!keys.includes('ingredients')) {
     await setItem('ingredients', JSON.stringify(ingredientsData));
-  }
-  if (!keys.includes('cookware')) {
     await setItem('cookware', JSON.stringify(cookwareData));
-  }
-  if (!keys.includes('unitConversions')) {
     await setItem('unitConversions', JSON.stringify(unitConversionsData));
+
+    const keys = await AsyncStorage.getAllKeys();
+    if (!keys.includes('userFridge')) await setItem('userFridge', JSON.stringify([]));
+    if (!keys.includes('userCollection')) await setItem('userCollection', JSON.stringify([]));
+  } catch (e) {
+    console.error('Database initialization failed:', e);
+    throw e;
   }
-  if (!keys.includes('userFridge')) {
-    await setItem('userFridge', JSON.stringify([]));
-  }
-  if (!keys.includes('userCollection')) {
-    await setItem('userCollection', JSON.stringify([]));
-  }
-  // console.log('Database initialized');
 };
 
 export const getUserFridge = async (): Promise<UserFridgeItem[]> => {
-  const data = await getItem('userFridge');
-  return data ? JSON.parse(data) : [];
+  try {
+    const data = await getItem('userFridge');
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Failed to get user fridge:', e);
+    return [];
+  }
 };
 
-export const addToFridge = async (ingredientId: number, notes?: string, customQuantity?: number) => {
+export const addToFridge = async (
+  ingredientId: number,
+  notes?: string,
+  customQuantity?: number
+) => {
   const fridge = await getUserFridge();
   if (fridge.some((item) => item.ingredientId === ingredientId)) return;
   fridge.push({ ingredientId, addedDate: new Date().toISOString(), notes, customQuantity });
@@ -98,17 +96,27 @@ export const updateFridgeItem = async (
 };
 
 export const getFridgeWithDetails = async () => {
-  const fridge = await getUserFridge();
-  const ingredients = JSON.parse((await getItem('ingredients')) || '[]');
-  return fridge.map((item) => ({
-    ...item,
-    ingredient: ingredients.find((ing: any) => ing.id === item.ingredientId),
-  }));
+  try {
+    const fridge = await getUserFridge();
+    const ingredients = JSON.parse((await getItem('ingredients')) || '[]');
+    return fridge.map((item) => ({
+      ...item,
+      ingredient: ingredients.find((ing: any) => ing.id === item.ingredientId),
+    }));
+  } catch (e) {
+    console.error('Failed to get fridge with details:', e);
+    return [];
+  }
 };
 
 export const getUserCollection = async (): Promise<UserCollectionItem[]> => {
-  const data = await getItem('userCollection');
-  return data ? JSON.parse(data) : [];
+  try {
+    const data = await getItem('userCollection');
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Failed to get user collection:', e);
+    return [];
+  }
 };
 
 export const addToCollection = async (recipeId: number, notes?: string) => {
@@ -134,18 +142,35 @@ export const updateCollectionItem = async (
 };
 
 export const getCollectionWithDetails = async () => {
-  const collection = await getUserCollection();
-  const recipes = JSON.parse((await getItem('recipes')) || '[]');
-  return collection.map((item) => ({
-    ...item,
-    recipe: recipes.find((rec: any) => rec.id === item.recipeId),
-  }));
+  try {
+    const collection = await getUserCollection();
+    const recipes = JSON.parse((await getItem('recipes')) || '[]');
+    return collection.map((item) => ({
+      ...item,
+      recipe: recipes.find((rec: any) => rec.id === item.recipeId),
+    }));
+  } catch (e) {
+    console.error('Failed to get collection with details:', e);
+    return [];
+  }
 };
 
 export const getRecipes = async () => {
-  const data = await getItem('recipes');
-  // console.log('getRecipes raw data:', data ? data.substring(0, 100) : 'null');
-  const parsed = data ? JSON.parse(data) : [];
-  // console.log('getRecipes parsed:', parsed.length, 'recipes');
-  return parsed;
+  try {
+    const data = await getItem('recipes');
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Failed to get recipes:', e);
+    return [];
+  }
+};
+
+export const getIngredients = async () => {
+  try {
+    const data = await getItem('ingredients');
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Failed to get ingredients:', e);
+    return [];
+  }
 };

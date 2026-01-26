@@ -6,4 +6,8 @@ export const cookwareData = [
   { id: 'whisk', name: 'Whisk', type: 'utensil', available: true, images: [] },
   { id: 'spatula', name: 'Spatula', type: 'utensil', available: true, images: [] },
   { id: 'fork', name: 'Fork', type: 'utensil', available: true, images: [] },
+  { id: 'baking-sheet', name: 'Baking Sheet', type: 'bakeware', available: true, images: [] },
+  { id: 'knife', name: 'Knife', type: 'utensil', available: true, images: [] },
+  { id: 'cutting-board', name: 'Cutting Board', type: 'utensil', available: true, images: [] },
+  { id: 'oven', name: 'Oven', type: 'appliance', available: true, images: [] },
 ];

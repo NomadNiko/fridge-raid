@@ -3,6 +3,7 @@ import { Appearance } from 'react-native';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { initializeDatabase } from '../lib/storage';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   const [colorScheme, setColorScheme] = useState(Appearance.getColorScheme());
@@ -10,7 +11,7 @@ export default function TabLayout() {
   useEffect(() => {
     // console.log('_layout.tsx initializing database');
     initializeDatabase().then(() => {});
-    
+
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
       setColorScheme(colorScheme);
     });
@@ -36,10 +37,40 @@ export default function TabLayout() {
           },
           headerTintColor: isDark ? '#ffffff' : '#000000',
         }}>
-        <Tabs.Screen name="index" options={{ title: 'Home' }} />
-        <Tabs.Screen name="fridge" options={{ title: 'Fridge' }} />
-        <Tabs.Screen name="collection" options={{ title: 'Collection' }} />
-        <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'Home',
+            tabBarIcon: ({ color, size }) => <Ionicons name="search" size={size} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="fridge"
+          options={{
+            title: 'Fridge',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="cube-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="collection"
+          options={{
+            title: 'Collection',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="heart-outline" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="settings-outline" size={size} color={color} />
+            ),
+          }}
+        />
       </Tabs>
     </>
   );

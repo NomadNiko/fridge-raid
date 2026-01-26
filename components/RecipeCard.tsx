@@ -1,14 +1,5 @@
 import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
-
-type Recipe = {
-  id: number;
-  name: string;
-  cuisine: string;
-  difficulty: string;
-  totalTime: number;
-  rating: number;
-  images: string[];
-};
+import { Recipe } from '../types';
 
 type RecipeCardProps = {
   recipe: Recipe;
@@ -58,6 +49,9 @@ export default function RecipeCard({
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
         <TouchableOpacity
           onPress={onView}
+          accessible={true}
+          accessibilityLabel={`View ${recipe.name} recipe details`}
+          accessibilityRole="button"
           style={{
             flex: 1,
             backgroundColor: isDark ? '#007aff' : '#007aff',
@@ -70,6 +64,13 @@ export default function RecipeCard({
 
         <TouchableOpacity
           onPress={onToggleCollection}
+          accessible={true}
+          accessibilityLabel={
+            isInCollection
+              ? `Remove ${recipe.name} from collection`
+              : `Add ${recipe.name} to collection`
+          }
+          accessibilityRole="button"
           style={{
             flex: 1,
             backgroundColor: isInCollection
