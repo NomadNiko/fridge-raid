@@ -4,4 +4,6 @@ export type Ingredient = {
   category: string;
   unit: string;
   quantity: number;
+  images?: string[];
+  alternativeNames?: string[];
 };

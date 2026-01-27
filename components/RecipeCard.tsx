@@ -11,17 +11,13 @@ type RecipeCardProps = {
   onToggleCollection: () => void;
 };
 
-function RecipeCard({
-  recipe,
-  isInCollection,
-  onView,
-  onToggleCollection,
-}: RecipeCardProps) {
+function RecipeCard({ recipe, isInCollection, onView, onToggleCollection }: RecipeCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
 
-  const firstImage = recipe.images && recipe.images.length > 0 ? getRecipeImage(recipe.images[0]) : null;
+  const firstImage =
+    recipe.images && recipe.images.length > 0 ? getRecipeImage(recipe.images[0]) : null;
 
   return (
     <View

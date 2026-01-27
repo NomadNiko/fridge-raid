@@ -6,6 +6,7 @@ import {
   useColorScheme,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -18,6 +19,8 @@ import {
 } from '../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types/ingredient';
+import { getIngredientImage } from '../lib/ingredientImages';
+import { matchIngredient } from '../lib/ingredientMatcher';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -46,14 +49,15 @@ export default function Fridge() {
     setAllIngredients(ingredients);
     setUserFridge(fridge);
 
-    const fridgeIngredientNames = fridge.map((item) => item.ingredient?.name.toLowerCase());
+    const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
     const missingIngredients = new Map();
 
     collection.forEach((item) => {
       if (item.recipe) {
         item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
-          const ingName = ing.name.toLowerCase();
-          if (!fridgeIngredientNames.includes(ingName)) {
+          const matched = matchIngredient(ing.name, fridgeIngredients);
+          if (!matched) {
+            const ingName = ing.name.toLowerCase();
             if (!missingIngredients.has(ingName)) {
               missingIngredients.set(ingName, {
                 name: ing.name,
@@ -130,14 +134,15 @@ export default function Fridge() {
       ]);
       setUserFridge(fridge);
 
-      const fridgeIngredientNames = fridge.map((item) => item.ingredient?.name.toLowerCase());
+      const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
       const missingIngredients = new Map();
 
       collection.forEach((item) => {
         if (item.recipe) {
           item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
-            const ingName = ing.name.toLowerCase();
-            if (!fridgeIngredientNames.includes(ingName)) {
+            const matched = matchIngredient(ing.name, fridgeIngredients);
+            if (!matched) {
+              const ingName = ing.name.toLowerCase();
               if (!missingIngredients.has(ingName)) {
                 missingIngredients.set(ingName, {
                   name: ing.name,
@@ -169,14 +174,15 @@ export default function Fridge() {
       ]);
       setUserFridge(fridge);
 
-      const fridgeIngredientNames = fridge.map((item) => item.ingredient?.name.toLowerCase());
+      const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
       const missingIngredients = new Map();
 
       collection.forEach((item) => {
         if (item.recipe) {
           item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
-            const ingName = ing.name.toLowerCase();
-            if (!fridgeIngredientNames.includes(ingName)) {
+            const matched = matchIngredient(ing.name, fridgeIngredients);
+            if (!matched) {
+              const ingName = ing.name.toLowerCase();
               if (!missingIngredients.has(ingName)) {
                 missingIngredients.set(ingName, {
                   name: ing.name,
@@ -259,43 +265,56 @@ export default function Fridge() {
                 }}>
                 Search Results
               </Text>
-              {filteredIngredients.slice(0, 5).map((ing) => (
-                <TouchableOpacity
-                  key={ing.id}
-                  onPress={() => handleAddToFridge(ing.id)}
-                  disabled={isInFridge(ing.id)}
-                  accessible={true}
-                  accessibilityLabel={
-                    isInFridge(ing.id)
-                      ? `${ing.name} already in fridge`
-                      : `Add ${ing.name} to fridge`
-                  }
-                  accessibilityRole="button"
-                  style={{
-                    backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                    padding: 12,
-                    borderRadius: 8,
-                    marginBottom: 8,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    opacity: isInFridge(ing.id) ? 0.5 : 1,
-                  }}>
-                  <View>
-                    <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
-                      {ing.name}
-                    </Text>
-                    <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
-                      {ing.category}
-                    </Text>
-                  </View>
-                  {isInFridge(ing.id) ? (
-                    <Ionicons name="checkmark-circle" size={24} color="#34c759" />
-                  ) : (
-                    <Ionicons name="add-circle-outline" size={24} color="#007aff" />
-                  )}
-                </TouchableOpacity>
-              ))}
+              {filteredIngredients.slice(0, 5).map((ing) => {
+                const imageSource =
+                  ing.images && ing.images.length > 0 ? getIngredientImage(ing.images[0]) : null;
+                return (
+                  <TouchableOpacity
+                    key={ing.id}
+                    onPress={() => handleAddToFridge(ing.id)}
+                    disabled={isInFridge(ing.id)}
+                    accessible={true}
+                    accessibilityLabel={
+                      isInFridge(ing.id)
+                        ? `${ing.name} already in fridge`
+                        : `Add ${ing.name} to fridge`
+                    }
+                    accessibilityRole="button"
+                    style={{
+                      backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                      padding: 12,
+                      borderRadius: 8,
+                      marginBottom: 8,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      opacity: isInFridge(ing.id) ? 0.5 : 1,
+                    }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      {imageSource && (
+                        <Image
+                          source={imageSource}
+                          style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <View>
+                        <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
+                          {ing.name}
+                        </Text>
+                        <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
+                          {ing.category}
+                        </Text>
+                      </View>
+                    </View>
+                    {isInFridge(ing.id) ? (
+                      <Ionicons name="checkmark-circle" size={24} color="#34c759" />
+                    ) : (
+                      <Ionicons name="add-circle-outline" size={24} color="#007aff" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </View>
@@ -335,6 +354,10 @@ export default function Fridge() {
                 const ingredient = allIngredients.find(
                   (ing) => ing.name.toLowerCase() === item.name.toLowerCase()
                 );
+                const imageSource =
+                  ingredient && ingredient.images && ingredient.images.length > 0
+                    ? getIngredientImage(ingredient.images[0])
+                    : null;
                 return (
                   <View
                     key={idx}
@@ -347,18 +370,27 @@ export default function Fridge() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                     }}>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          color: isDark ? '#ffffff' : '#000000',
-                          fontSize: 16,
-                          marginBottom: 4,
-                        }}>
-                        {item.name}
-                      </Text>
-                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 13 }}>
-                        Needed for: {item.recipes.join(', ')}
-                      </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      {imageSource && (
+                        <Image
+                          source={imageSource}
+                          style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            color: isDark ? '#ffffff' : '#000000',
+                            fontSize: 16,
+                            marginBottom: 4,
+                          }}>
+                          {item.name}
+                        </Text>
+                        <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 13 }}>
+                          Needed for: {item.recipes.join(', ')}
+                        </Text>
+                      </View>
                     </View>
                     {ingredient && (
                       <TouchableOpacity
@@ -434,35 +466,50 @@ export default function Fridge() {
                 </Text>
               </View>
             ) : (
-              userFridge.map((item) => (
-                <View
-                  key={item.ingredientId}
-                  style={{
-                    backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                    padding: 12,
-                    borderRadius: 8,
-                    marginBottom: 8,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}>
-                  <View>
-                    <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
-                      {item.ingredient?.name || 'Unknown'}
-                    </Text>
-                    <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
-                      {item.ingredient?.category || ''}
-                    </Text>
+              userFridge.map((item) => {
+                const imageSource =
+                  item.ingredient?.images && item.ingredient.images.length > 0
+                    ? getIngredientImage(item.ingredient.images[0])
+                    : null;
+                return (
+                  <View
+                    key={item.ingredientId}
+                    style={{
+                      backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                      padding: 12,
+                      borderRadius: 8,
+                      marginBottom: 8,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      {imageSource && (
+                        <Image
+                          source={imageSource}
+                          style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <View>
+                        <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
+                          {item.ingredient?.name || 'Unknown'}
+                        </Text>
+                        <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
+                          {item.ingredient?.category || ''}
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => handleRemoveFromFridge(item.ingredientId)}
+                      accessible={true}
+                      accessibilityLabel={`Remove ${item.ingredient?.name || 'ingredient'} from fridge`}
+                      accessibilityRole="button">
+                      <Ionicons name="trash-outline" size={24} color="#ff3b30" />
+                    </TouchableOpacity>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => handleRemoveFromFridge(item.ingredientId)}
-                    accessible={true}
-                    accessibilityLabel={`Remove ${item.ingredient?.name || 'ingredient'} from fridge`}
-                    accessibilityRole="button">
-                    <Ionicons name="trash-outline" size={24} color="#ff3b30" />
-                  </TouchableOpacity>
-                </View>
-              ))
+                );
+              })
             ))}
 
           <TouchableOpacity
@@ -527,7 +574,11 @@ export default function Fridge() {
                     <Text
                       style={{
                         color:
-                          selectedCategory === category ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                          selectedCategory === category
+                            ? '#ffffff'
+                            : isDark
+                              ? '#ffffff'
+                              : '#000000',
                         fontSize: 14,
                       }}>
                       {category}
@@ -535,47 +586,49 @@ export default function Fridge() {
                   </TouchableOpacity>
                 ))}
               </View>
-              {paginatedIngredients.map((ing) => (
-                <TouchableOpacity
-                  key={ing.id}
-                  onPress={() => handleAddToFridge(ing.id)}
-                  disabled={isInFridge(ing.id)}
-                  style={{
-                    backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                    padding: 12,
-                    borderRadius: 8,
-                    marginBottom: 8,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    opacity: isInFridge(ing.id) ? 0.5 : 1,
-                  }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View
-                      style={{
-                        width: 50,
-                        height: 50,
-                        borderRadius: 8,
-                        backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
-                        marginRight: 12,
-                      }}
-                    />
-                    <View>
-                      <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
-                        {ing.name}
-                      </Text>
-                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
-                        {ing.category}
-                      </Text>
+              {paginatedIngredients.map((ing) => {
+                const imageSource =
+                  ing.images && ing.images.length > 0 ? getIngredientImage(ing.images[0]) : null;
+                return (
+                  <TouchableOpacity
+                    key={ing.id}
+                    onPress={() => handleAddToFridge(ing.id)}
+                    disabled={isInFridge(ing.id)}
+                    style={{
+                      backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                      padding: 12,
+                      borderRadius: 8,
+                      marginBottom: 8,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      opacity: isInFridge(ing.id) ? 0.5 : 1,
+                    }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      {imageSource && (
+                        <Image
+                          source={imageSource}
+                          style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <View>
+                        <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
+                          {ing.name}
+                        </Text>
+                        <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
+                          {ing.category}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  {isInFridge(ing.id) ? (
-                    <Ionicons name="checkmark-circle" size={24} color="#34c759" />
-                  ) : (
-                    <Ionicons name="add-circle-outline" size={24} color="#007aff" />
-                  )}
-                </TouchableOpacity>
-              ))}
+                    {isInFridge(ing.id) ? (
+                      <Ionicons name="checkmark-circle" size={24} color="#34c759" />
+                    ) : (
+                      <Ionicons name="add-circle-outline" size={24} color="#007aff" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
               {totalPages > 1 && (
                 <View
                   style={{

@@ -1,10 +1,20 @@
-import { Modal, View, Text, ScrollView, TouchableOpacity, useColorScheme, Image } from 'react-native';
+import {
+  Modal,
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  useColorScheme,
+  Image,
+} from 'react-native';
 import { Recipe } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { getFridgeWithDetails } from '../lib/storage';
 import ImageViewer from './ImageViewer';
 import { getRecipeImage } from '../lib/images';
+import { Ingredient } from '../types/ingredient';
+import { hasIngredient } from '../lib/ingredientMatcher';
 
 type RecipeDetailModalProps = {
   visible: boolean;
@@ -23,15 +33,15 @@ export default function RecipeDetailModal({
 }: RecipeDetailModalProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const [fridgeIngredients, setFridgeIngredients] = useState<string[]>([]);
+  const [fridgeIngredients, setFridgeIngredients] = useState<Ingredient[]>([]);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<any>(null);
 
   useEffect(() => {
     if (visible) {
       getFridgeWithDetails().then((fridge) => {
-        const ingredientNames = fridge.map((item) => item.ingredient?.name.toLowerCase());
-        setFridgeIngredients(ingredientNames);
+        const ingredients = fridge.map((item) => item.ingredient).filter(Boolean);
+        setFridgeIngredients(ingredients);
       });
     }
   }, [visible]);
@@ -81,7 +91,10 @@ export default function RecipeDetailModal({
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
           {recipe.images && recipe.images.length > 0 && (
             <View style={{ marginBottom: 16 }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginHorizontal: -16 }}>
                 {recipe.images.map((img, idx) => {
                   const imageSource = getRecipeImage(img);
                   if (!imageSource) return null;
@@ -92,7 +105,10 @@ export default function RecipeDetailModal({
                         setSelectedImage(imageSource);
                         setImageViewerVisible(true);
                       }}
-                      style={{ marginLeft: idx === 0 ? 16 : 8, marginRight: idx === recipe.images.length - 1 ? 16 : 0 }}>
+                      style={{
+                        marginLeft: idx === 0 ? 16 : 8,
+                        marginRight: idx === recipe.images.length - 1 ? 16 : 0,
+                      }}>
                       <Image
                         source={imageSource}
                         style={{ width: 300, height: 200, borderRadius: 12 }}
@@ -182,22 +198,22 @@ export default function RecipeDetailModal({
               },
               idx: number
             ) => {
-              const hasIngredient = fridgeIngredients.includes(ing.name.toLowerCase());
+              const hasIng = hasIngredient(ing.name, fridgeIngredients);
               return (
                 <View
                   key={idx}
                   style={{ flexDirection: 'row', marginBottom: 8, alignItems: 'center' }}>
-                  {!hasIngredient && (
+                  {!hasIng && (
                     <Ionicons name="close" size={16} color="#ff3b30" style={{ marginRight: 4 }} />
                   )}
-                  {hasIngredient && (
+                  {hasIng && (
                     <Text style={{ color: isDark ? '#8e8e93' : '#636366', marginRight: 8 }}>•</Text>
                   )}
                   <Text
                     style={{
-                      color: hasIngredient ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
+                      color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
                       flex: 1,
-                      fontStyle: hasIngredient ? 'normal' : 'italic',
+                      fontStyle: hasIng ? 'normal' : 'italic',
                     }}>
                     {ing.amount} {ing.unit} {ing.name}
                     {ing.preparation && `, ${ing.preparation}`}

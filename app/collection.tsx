@@ -19,6 +19,8 @@ import {
 import RecipeDetailModal from '../components/RecipeDetailModal';
 import { Recipe } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { Ingredient } from '../types/ingredient';
+import { hasIngredient } from '../lib/ingredientMatcher';
 
 export default function Collection() {
   const colorScheme = useColorScheme();
@@ -26,7 +28,7 @@ export default function Collection() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [userCollection, setUserCollection] = useState<any[]>([]);
   const [suggestedRecipes, setSuggestedRecipes] = useState<any[]>([]);
-  const [fridgeIngredients, setFridgeIngredients] = useState<string[]>([]);
+  const [fridgeIngredients, setFridgeIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [collectionExpanded, setCollectionExpanded] = useState(true);
   const [suggestedExpanded, setSuggestedExpanded] = useState(true);
@@ -41,8 +43,8 @@ export default function Collection() {
     ]);
     setUserCollection(collection);
 
-    const fridgeIngredientNames = fridge.map((item) => item.ingredient?.name.toLowerCase());
-    setFridgeIngredients(fridgeIngredientNames);
+    const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
+    setFridgeIngredients(fridgeIngs);
 
     const collectionRecipeIds = collection.map((item) => item.recipeId);
     const recipesNotInCollection = allRecipes.filter(
@@ -51,7 +53,7 @@ export default function Collection() {
 
     const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
       const missingCount = recipe.ingredients.filter(
-        (ing: { name: string }) => !fridgeIngredientNames.includes(ing.name.toLowerCase())
+        (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngs)
       ).length;
       return { recipe, missingCount };
     });
@@ -93,8 +95,8 @@ export default function Collection() {
       ]);
       setUserCollection(collection);
 
-      const fridgeIngredientNames = fridge.map((item) => item.ingredient?.name.toLowerCase());
-      setFridgeIngredients(fridgeIngredientNames);
+      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
+      setFridgeIngredients(fridgeIngs);
 
       const collectionRecipeIds = collection.map((item) => item.recipeId);
       const recipesNotInCollection = allRecipes.filter(
@@ -103,7 +105,7 @@ export default function Collection() {
 
       const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
         const missingCount = recipe.ingredients.filter(
-          (ing: { name: string }) => !fridgeIngredientNames.includes(ing.name.toLowerCase())
+          (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngs)
         ).length;
         return { recipe, missingCount };
       });
@@ -163,19 +165,19 @@ export default function Collection() {
             </Text>
             {recipe.ingredients.map(
               (ing: { name: string; amount: number; unit: string }, idx: number) => {
-                const hasIngredient = fridgeIngredients.includes(ing.name.toLowerCase());
+                const hasIng = hasIngredient(ing.name, fridgeIngredients);
                 return (
                   <View
                     key={idx}
                     style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                    {!hasIngredient && (
+                    {!hasIng && (
                       <Ionicons name="close" size={14} color="#ff3b30" style={{ marginRight: 4 }} />
                     )}
                     <Text
                       style={{
-                        color: hasIngredient ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
+                        color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
                         fontSize: 13,
-                        fontStyle: hasIngredient ? 'normal' : 'italic',
+                        fontStyle: hasIng ? 'normal' : 'italic',
                       }}>
                       {ing.amount} {ing.unit} {ing.name}
                     </Text>
@@ -294,7 +296,7 @@ export default function Collection() {
             userCollection.map((item) => {
               if (!item.recipe) return null;
               const missingCount = item.recipe.ingredients.filter(
-                (ing: { name: string }) => !fridgeIngredients.includes(ing.name.toLowerCase())
+                (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
               ).length;
               return renderRecipeCard(item.recipe, missingCount);
             })
