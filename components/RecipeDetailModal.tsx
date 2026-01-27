@@ -1,8 +1,9 @@
-import { Modal, View, Text, ScrollView, TouchableOpacity, useColorScheme } from 'react-native';
+import { Modal, View, Text, ScrollView, TouchableOpacity, useColorScheme, Image } from 'react-native';
 import { Recipe } from '../types';
 import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { getFridgeWithDetails } from '../lib/storage';
+import ImageViewer from './ImageViewer';
 
 type RecipeDetailModalProps = {
   visible: boolean;
@@ -22,6 +23,8 @@ export default function RecipeDetailModal({
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [fridgeIngredients, setFridgeIngredients] = useState<string[]>([]);
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<any>(null);
 
   useEffect(() => {
     if (visible) {
@@ -75,6 +78,27 @@ export default function RecipeDetailModal({
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+          {recipe.images && recipe.images.length > 0 && (
+            <View style={{ marginBottom: 16 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }}>
+                {recipe.images.map((img, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => {
+                      setSelectedImage(img.type === 'local' ? img.uri : { uri: img.uri });
+                      setImageViewerVisible(true);
+                    }}
+                    style={{ marginLeft: idx === 0 ? 16 : 8, marginRight: idx === recipe.images.length - 1 ? 16 : 0 }}>
+                    <Image
+                      source={img.type === 'local' ? img.uri : { uri: img.uri }}
+                      style={{ width: 300, height: 200, borderRadius: 12 }}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
           <Text
             style={{
               color: isDark ? '#ffffff' : '#000000',
@@ -253,6 +277,12 @@ export default function RecipeDetailModal({
           <View style={{ height: 40 }} />
         </ScrollView>
       </View>
+
+      <ImageViewer
+        visible={imageViewerVisible}
+        imageUri={selectedImage}
+        onClose={() => setImageViewerVisible(false)}
+      />
     </Modal>
   );
 }

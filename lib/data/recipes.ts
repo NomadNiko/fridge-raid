@@ -10,7 +10,7 @@ export const recipesData = [
     prepTime: 5,
     cookTime: 10,
     totalTime: 15,
-    images: [],
+    images: [{ uri: require('../../assets/recipe-image/classic-grilled-cheese.jpg'), type: 'local' }],
     video: null,
     nutrition: { calories: 450, protein: 18, carbs: 35, fat: 25, fiber: 2, sugar: 4, sodium: 850 },
     ingredients: [
@@ -68,7 +68,7 @@ export const recipesData = [
     prepTime: 2,
     cookTime: 5,
     totalTime: 7,
-    images: [],
+    images: [{ uri: require('../../assets/recipe-image/scrambled-eggs.jpg'), type: 'local' }],
     video: null,
     nutrition: { calories: 220, protein: 14, carbs: 2, fat: 18, fiber: 0, sugar: 1, sodium: 320 },
     ingredients: [
@@ -124,7 +124,7 @@ export const recipesData = [
     prepTime: 5,
     cookTime: 15,
     totalTime: 20,
-    images: [],
+    images: [{ uri: require('../../assets/recipe-image/spaghetti-garlic-oil.jpg'), type: 'local' }],
     video: null,
     nutrition: { calories: 420, protein: 12, carbs: 58, fat: 16, fiber: 3, sugar: 2, sodium: 240 },
     ingredients: [
@@ -214,7 +214,7 @@ export const recipesData = [
     prepTime: 10,
     cookTime: 20,
     totalTime: 30,
-    images: [],
+    images: [{ uri: require('../../assets/recipe-image/honey-garlic-chicken.jpg'), type: 'local' }],
     video: null,
     nutrition: { calories: 380, protein: 32, carbs: 28, fat: 12, fiber: 1, sugar: 22, sodium: 680 },
     ingredients: [
@@ -600,7 +600,7 @@ export const recipesData = [
     prepTime: 15,
     cookTime: 30,
     totalTime: 45,
-    images: [],
+    images: [{ uri: require('../../assets/recipe-image/roasted-vegetables.jpg'), type: 'local' }],
     video: null,
     nutrition: { calories: 140, protein: 4, carbs: 22, fat: 6, fiber: 6, sugar: 8, sodium: 180 },
     ingredients: [
@@ -678,7 +678,7 @@ export const recipesData = [
     prepTime: 5,
     cookTime: 8,
     totalTime: 13,
-    images: [],
+    images: [{ uri: require('../../assets/recipe-image/mushroom-omelette.jpg'), type: 'local' }],
     video: null,
     nutrition: { calories: 280, protein: 18, carbs: 6, fat: 21, fiber: 1, sugar: 2, sodium: 480 },
     ingredients: [
@@ -816,7 +816,7 @@ export const recipesData = [
     prepTime: 5,
     cookTime: 60,
     totalTime: 65,
-    images: [],
+    images: [{ uri: require('../../assets/recipe-image/baked-potato.jpg'), type: 'local' }],
     video: null,
     nutrition: { calories: 280, protein: 8, carbs: 48, fat: 8, fiber: 5, sugar: 3, sodium: 320 },
     ingredients: [

@@ -1,5 +1,7 @@
-import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, useColorScheme, Image } from 'react-native';
 import { Recipe } from '../types';
+import { useState } from 'react';
+import ImageViewer from './ImageViewer';
 
 type RecipeCardProps = {
   recipe: Recipe;
@@ -16,6 +18,9 @@ export default function RecipeCard({
 }: RecipeCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+
+  const firstImage = recipe.images && recipe.images.length > 0 ? recipe.images[0] : null;
 
   return (
     <View
@@ -25,6 +30,15 @@ export default function RecipeCard({
         padding: 16,
         marginBottom: 12,
       }}>
+      {firstImage && (
+        <TouchableOpacity onPress={() => setImageViewerVisible(true)} style={{ marginBottom: 12 }}>
+          <Image
+            source={firstImage.type === 'local' ? firstImage.uri : { uri: firstImage.uri }}
+            style={{ width: '100%', height: 200, borderRadius: 8 }}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+      )}
       <View
         style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <View style={{ flex: 1 }}>
@@ -93,6 +107,12 @@ export default function RecipeCard({
           </Text>
         </TouchableOpacity>
       </View>
+
+      <ImageViewer
+        visible={imageViewerVisible}
+        imageUri={firstImage?.type === 'local' ? firstImage.uri : { uri: firstImage?.uri }}
+        onClose={() => setImageViewerVisible(false)}
+      />
     </View>
   );
 }

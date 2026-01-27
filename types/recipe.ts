@@ -10,7 +10,7 @@ export type Recipe = {
   cookTime: number;
   totalTime: number;
   rating: number;
-  images: string[];
+  images: { uri: any; type: 'local' | 'remote' }[];
   ingredients: {
     name: string;
     amount: number;
