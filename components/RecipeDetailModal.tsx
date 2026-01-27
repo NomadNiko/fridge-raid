@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { getFridgeWithDetails } from '../lib/storage';
 import ImageViewer from './ImageViewer';
+import { getRecipeImage } from '../lib/images';
 
 type RecipeDetailModalProps = {
   visible: boolean;
@@ -81,21 +82,25 @@ export default function RecipeDetailModal({
           {recipe.images && recipe.images.length > 0 && (
             <View style={{ marginBottom: 16 }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }}>
-                {recipe.images.map((img, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    onPress={() => {
-                      setSelectedImage(img.type === 'local' ? img.uri : { uri: img.uri });
-                      setImageViewerVisible(true);
-                    }}
-                    style={{ marginLeft: idx === 0 ? 16 : 8, marginRight: idx === recipe.images.length - 1 ? 16 : 0 }}>
-                    <Image
-                      source={img.type === 'local' ? img.uri : { uri: img.uri }}
-                      style={{ width: 300, height: 200, borderRadius: 12 }}
-                      resizeMode="cover"
-                    />
-                  </TouchableOpacity>
-                ))}
+                {recipe.images.map((img, idx) => {
+                  const imageSource = getRecipeImage(img);
+                  if (!imageSource) return null;
+                  return (
+                    <TouchableOpacity
+                      key={idx}
+                      onPress={() => {
+                        setSelectedImage(imageSource);
+                        setImageViewerVisible(true);
+                      }}
+                      style={{ marginLeft: idx === 0 ? 16 : 8, marginRight: idx === recipe.images.length - 1 ? 16 : 0 }}>
+                      <Image
+                        source={imageSource}
+                        style={{ width: 300, height: 200, borderRadius: 12 }}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             </View>
           )}

@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, useColorScheme, Image } from 'react-nativ
 import { Recipe } from '../types';
 import { useState } from 'react';
 import ImageViewer from './ImageViewer';
+import { getRecipeImage } from '../lib/images';
 
 type RecipeCardProps = {
   recipe: Recipe;
@@ -20,7 +21,7 @@ export default function RecipeCard({
   const isDark = colorScheme === 'dark';
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
 
-  const firstImage = recipe.images && recipe.images.length > 0 ? recipe.images[0] : null;
+  const firstImage = recipe.images && recipe.images.length > 0 ? getRecipeImage(recipe.images[0]) : null;
 
   return (
     <View
@@ -33,7 +34,7 @@ export default function RecipeCard({
       {firstImage && (
         <TouchableOpacity onPress={() => setImageViewerVisible(true)} style={{ marginBottom: 12 }}>
           <Image
-            source={firstImage.type === 'local' ? firstImage.uri : { uri: firstImage.uri }}
+            source={firstImage}
             style={{ width: '100%', height: 200, borderRadius: 8 }}
             resizeMode="cover"
           />
@@ -110,7 +111,7 @@ export default function RecipeCard({
 
       <ImageViewer
         visible={imageViewerVisible}
-        imageUri={firstImage?.type === 'local' ? firstImage.uri : { uri: firstImage?.uri }}
+        imageUri={firstImage}
         onClose={() => setImageViewerVisible(false)}
       />
     </View>
