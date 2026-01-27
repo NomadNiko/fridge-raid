@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, useColorScheme, Image } from 'react-native';
 import { Recipe } from '../types';
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import ImageViewer from './ImageViewer';
 import { getRecipeImage } from '../lib/images';
 
@@ -11,7 +11,7 @@ type RecipeCardProps = {
   onToggleCollection: () => void;
 };
 
-export default function RecipeCard({
+function RecipeCard({
   recipe,
   isInCollection,
   onView,
@@ -117,3 +117,5 @@ export default function RecipeCard({
     </View>
   );
 }
+
+export default memo(RecipeCard);
