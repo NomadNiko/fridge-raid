@@ -12,6 +12,9 @@ npm-debug.*
 web-build/
 ios
 android
+assets/
+scripts/
+scraped/
 
 # macOS
 .DS_Store

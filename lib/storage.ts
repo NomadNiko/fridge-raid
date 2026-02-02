@@ -23,6 +23,7 @@ export type UserCollectionItem = {
   lastCooked?: string;
   timesCooked?: number;
   userRating?: number;
+  includeInShoppingList?: boolean;
 };
 
 const getItem = async (key: string): Promise<string | null> => {
@@ -122,7 +123,7 @@ export const getUserCollection = async (): Promise<UserCollectionItem[]> => {
 export const addToCollection = async (recipeId: number, notes?: string) => {
   const collection = await getUserCollection();
   if (collection.some((item) => item.recipeId === recipeId)) return;
-  collection.push({ recipeId, addedDate: new Date().toISOString(), notes, timesCooked: 0 });
+  collection.push({ recipeId, addedDate: new Date().toISOString(), notes, timesCooked: 0, includeInShoppingList: true });
   await setItem('userCollection', JSON.stringify(collection));
 };
 

@@ -15,6 +15,7 @@ import {
   addToCollection,
   removeFromCollection,
   getUserCollection,
+  updateCollectionItem,
 } from '../lib/storage';
 import RecipeDetailModal from '../components/RecipeDetailModal';
 import { Recipe } from '../types';
@@ -52,13 +53,17 @@ export default function Collection() {
     );
 
     const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
+      const haveCount = recipe.ingredients.filter(
+        (ing: { name: string }) => hasIngredient(ing.name, fridgeIngs)
+      ).length;
       const missingCount = recipe.ingredients.filter(
         (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngs)
       ).length;
-      return { recipe, missingCount };
+      return { recipe, haveCount, missingCount };
     });
 
     const sorted = recipesWithMissing
+      .filter((item: any) => item.haveCount > 0)
       .sort((a: any, b: any) => a.missingCount - b.missingCount)
       .slice(0, 5);
 
@@ -104,13 +109,17 @@ export default function Collection() {
       );
 
       const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
+        const haveCount = recipe.ingredients.filter(
+          (ing: { name: string }) => hasIngredient(ing.name, fridgeIngs)
+        ).length;
         const missingCount = recipe.ingredients.filter(
           (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngs)
         ).length;
-        return { recipe, missingCount };
+        return { recipe, haveCount, missingCount };
       });
 
       const sorted = recipesWithMissing
+        .filter((item: any) => item.haveCount > 0)
         .sort((a: any, b: any) => a.missingCount - b.missingCount)
         .slice(0, 5);
 
@@ -121,7 +130,7 @@ export default function Collection() {
   }, []);
 
   const renderRecipeCard = useCallback(
-    (recipe: Recipe, missingCount?: number) => (
+    (recipe: Recipe, missingCount?: number, collectionItem?: any) => (
       <View
         key={recipe.id}
         style={{
@@ -131,15 +140,42 @@ export default function Collection() {
           marginBottom: 12,
         }}>
         <View style={{ marginBottom: 12 }}>
-          <Text
-            style={{
-              color: isDark ? '#ffffff' : '#000000',
-              fontSize: 18,
-              fontWeight: '600',
-              marginBottom: 4,
-            }}>
-            {recipe.name}
-          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+            <Text
+              style={{
+                color: isDark ? '#ffffff' : '#000000',
+                fontSize: 18,
+                fontWeight: '600',
+                flex: 1,
+              }}>
+              {recipe.name}
+            </Text>
+            {collectionItem && (
+              <TouchableOpacity
+                onPress={async () => {
+                  await updateCollectionItem(recipe.id, {
+                    includeInShoppingList: collectionItem.includeInShoppingList === false,
+                  });
+                  loadData();
+                }}
+                accessible={true}
+                accessibilityLabel={`${collectionItem.includeInShoppingList === false ? 'Include' : 'Exclude'} ${recipe.name} in shopping list`}
+                accessibilityRole="button"
+                style={{
+                  backgroundColor: collectionItem.includeInShoppingList === false ? (isDark ? '#2c2c2e' : '#e5e5ea') : '#34c759',
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  marginLeft: 8,
+                }}>
+                <Ionicons
+                  name={collectionItem.includeInShoppingList === false ? 'cart-outline' : 'cart'}
+                  size={18}
+                  color={collectionItem.includeInShoppingList === false ? (isDark ? '#8e8e93' : '#636366') : '#ffffff'}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
           <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginBottom: 8 }}>
             {recipe.cuisine} • {recipe.difficulty} • {recipe.totalTime} min
           </Text>
@@ -298,7 +334,7 @@ export default function Collection() {
               const missingCount = item.recipe.ingredients.filter(
                 (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
               ).length;
-              return renderRecipeCard(item.recipe, missingCount);
+              return renderRecipeCard(item.recipe, missingCount, item);
             })
           ))}
 

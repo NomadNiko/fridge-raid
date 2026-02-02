@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/titlecase-converter.js:*)",
+      "Bash(node scripts/validate-ingredients.js:*)"
+    ]
+  }
+}

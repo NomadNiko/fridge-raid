@@ -6,6 +6,7 @@ import {
   useColorScheme,
   ActivityIndicator,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -32,7 +33,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
+  const [filtersVisible, setFiltersVisible] = useState(false);
   const toggleInProgress = useRef<Set<number>>(new Set());
+  const flatListRef = useRef<FlatList>(null);
 
   const loadData = useCallback(async () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -114,108 +117,127 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff' }}>
-      <View style={{ padding: 16 }}>
-        <View style={{ position: 'relative' }}>
-          <TextInput
-            value={search}
-            onChangeText={(text) => {
-              setSearch(text);
-              setCurrentPage(1);
-            }}
-            placeholder="Search recipes..."
-            placeholderTextColor={isDark ? '#8e8e93' : '#8e8e93'}
-            accessible={true}
-            accessibilityLabel="Search recipes by name, cuisine, tags, or ingredients"
-            accessibilityRole="search"
-            style={{
-              backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-              color: isDark ? '#ffffff' : '#000000',
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              paddingRight: search ? 40 : 16,
-              borderRadius: 10,
-              fontSize: 16,
-              marginBottom: 12,
-            }}
-          />
-          {search ? (
-            <TouchableOpacity
-              onPress={() => {
-                setSearch('');
-                setCurrentPage(1);
-              }}
-              style={{
-                position: 'absolute',
-                right: 12,
-                top: 12,
-              }}>
-              <Ionicons name="close-circle" size={20} color={isDark ? '#8e8e93' : '#636366'} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          <TouchableOpacity
-            onPress={() => {
-              setSelectedCuisine(null);
-              setCurrentPage(1);
-            }}
-            style={{
-              backgroundColor: !selectedCuisine ? '#007aff' : isDark ? '#1c1c1e' : '#f2f2f7',
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 16,
-            }}>
-            <Text
-              style={{
-                color: !selectedCuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
-                fontSize: 14,
-              }}>
-              All
-            </Text>
-          </TouchableOpacity>
-          {cuisines.map((cuisine) => (
-            <TouchableOpacity
-              key={cuisine}
-              onPress={() => {
-                setSelectedCuisine(cuisine);
-                setCurrentPage(1);
-              }}
-              style={{
-                backgroundColor:
-                  selectedCuisine === cuisine ? '#007aff' : isDark ? '#1c1c1e' : '#f2f2f7',
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 16,
-              }}>
-              <Text
-                style={{
-                  color: selectedCuisine === cuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
-                  fontSize: 14,
-                }}>
-                {cuisine}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
       <FlatList
+        ref={flatListRef}
         data={paginatedRecipes}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={{ padding: 16, paddingTop: 0 }}
+        contentContainerStyle={{ padding: 16 }}
         ListHeaderComponent={
-          !search.trim() && recipes.length > 0 ? (
-            <Text
+          <>
+            <View style={{ position: 'relative', marginBottom: 12 }}>
+              <TextInput
+                value={search}
+                onChangeText={(text) => {
+                  setSearch(text);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search recipes..."
+                placeholderTextColor={isDark ? '#8e8e93' : '#8e8e93'}
+                accessible={true}
+                accessibilityLabel="Search recipes by name, cuisine, tags, or ingredients"
+                accessibilityRole="search"
+                style={{
+                  backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                  color: isDark ? '#ffffff' : '#000000',
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  paddingRight: search ? 40 : 16,
+                  borderRadius: 10,
+                  fontSize: 16,
+                }}
+              />
+              {search ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearch('');
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: 12,
+                    top: 12,
+                  }}>
+                  <Ionicons name="close-circle" size={20} color={isDark ? '#8e8e93' : '#636366'} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <TouchableOpacity
+              onPress={() => setFiltersVisible(!filtersVisible)}
               style={{
-                color: isDark ? '#8e8e93' : '#636366',
-                fontSize: 16,
-                marginBottom: 12,
-                fontWeight: '600',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingVertical: 8,
+                marginBottom: 8,
               }}>
-              {selectedCuisine ? `${selectedCuisine} Recipes` : 'All Recipes'} (
-              {filteredRecipes.length})
-            </Text>
-          ) : null
+              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '600' }}>
+                Filters
+              </Text>
+              <Ionicons
+                name={filtersVisible ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={isDark ? '#ffffff' : '#000000'}
+              />
+            </TouchableOpacity>
+            {filtersVisible && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedCuisine(null);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    backgroundColor: !selectedCuisine ? '#007aff' : isDark ? '#1c1c1e' : '#f2f2f7',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                  }}>
+                  <Text
+                    style={{
+                      color: !selectedCuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                      fontSize: 14,
+                    }}>
+                    All
+                  </Text>
+                </TouchableOpacity>
+                {cuisines.map((cuisine) => (
+                  <TouchableOpacity
+                    key={cuisine}
+                    onPress={() => {
+                      setSelectedCuisine(cuisine);
+                      setCurrentPage(1);
+                    }}
+                    style={{
+                      backgroundColor:
+                        selectedCuisine === cuisine ? '#007aff' : isDark ? '#1c1c1e' : '#f2f2f7',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                    }}>
+                    <Text
+                      style={{
+                        color: selectedCuisine === cuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                        fontSize: 14,
+                      }}>
+                      {cuisine}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {!search.trim() && recipes.length > 0 && (
+              <Text
+                style={{
+                  color: isDark ? '#8e8e93' : '#636366',
+                  fontSize: 16,
+                  marginBottom: 12,
+                  fontWeight: '600',
+                }}>
+                {selectedCuisine ? `${selectedCuisine} Recipes` : 'All Recipes'} (
+                {filteredRecipes.length})
+              </Text>
+            )}
+          </>
         }
         renderItem={({ item }) => (
           <RecipeCard
@@ -236,7 +258,10 @@ export default function Home() {
                 marginTop: 16,
               }}>
               <TouchableOpacity
-                onPress={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                onPress={() => {
+                  setCurrentPage((p) => Math.max(1, p - 1));
+                  setTimeout(() => flatListRef.current?.scrollToIndex({ index: 0, animated: true }), 100);
+                }}
                 disabled={currentPage === 1}
                 style={{
                   backgroundColor: currentPage === 1 ? (isDark ? '#1c1c1e' : '#f2f2f7') : '#007aff',
@@ -257,7 +282,10 @@ export default function Home() {
                 {currentPage} / {totalPages}
               </Text>
               <TouchableOpacity
-                onPress={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                onPress={() => {
+                  setCurrentPage((p) => Math.min(totalPages, p + 1));
+                  setTimeout(() => flatListRef.current?.scrollToIndex({ index: 0, animated: true }), 100);
+                }}
                 disabled={currentPage === totalPages}
                 style={{
                   backgroundColor:

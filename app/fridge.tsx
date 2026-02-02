@@ -54,7 +54,7 @@ export default function Fridge() {
     const missingIngredients = new Map();
 
     collection.forEach((item) => {
-      if (item.recipe) {
+      if (item.recipe && item.includeInShoppingList !== false) {
         item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
           const matched = matchIngredient(ing.name, fridgeIngredients);
           if (!matched) {
@@ -89,7 +89,9 @@ export default function Fridge() {
         ? allIngredients.filter((ing) => {
             const query = search.toLowerCase();
             return (
-              ing.name.toLowerCase().includes(query) || ing.category.toLowerCase().includes(query)
+              ing.name.toLowerCase().includes(query) ||
+              ing.category.toLowerCase().includes(query) ||
+              (ing.alternativeNames && ing.alternativeNames.some((alt: string) => alt.toLowerCase().includes(query)))
             );
           })
         : [],
@@ -139,7 +141,7 @@ export default function Fridge() {
       const missingIngredients = new Map();
 
       collection.forEach((item) => {
-        if (item.recipe) {
+        if (item.recipe && item.includeInShoppingList !== false) {
           item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
             const matched = matchIngredient(ing.name, fridgeIngredients);
             if (!matched) {
@@ -179,7 +181,7 @@ export default function Fridge() {
       const missingIngredients = new Map();
 
       collection.forEach((item) => {
-        if (item.recipe) {
+        if (item.recipe && item.includeInShoppingList !== false) {
           item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
             const matched = matchIngredient(ing.name, fridgeIngredients);
             if (!matched) {
@@ -266,7 +268,7 @@ export default function Fridge() {
                 }}>
                 Search Results
               </Text>
-              {filteredIngredients.slice(0, 5).map((ing) => {
+              {filteredIngredients.slice(0, 15).map((ing) => {
                 const imageSource =
                   ing.images && ing.images.length > 0 ? getIngredientImage(ing.images[0]) : null;
                 return (
