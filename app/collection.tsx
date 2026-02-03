@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useState, useCallback, useRef } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   getRecipes,
   getCollectionWithDetails,
@@ -16,6 +16,9 @@ import {
   removeFromCollection,
   getUserCollection,
   updateCollectionItem,
+  getUserRecipes,
+  updateUserRecipe,
+  UserRecipe,
 } from '../lib/storage';
 import RecipeDetailModal from '../components/RecipeDetailModal';
 import { Recipe } from '../types';
@@ -26,8 +29,10 @@ import { hasIngredient } from '../lib/ingredientMatcher';
 export default function Collection() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [userCollection, setUserCollection] = useState<any[]>([]);
+  const [userRecipes, setUserRecipes] = useState<UserRecipe[]>([]);
   const [suggestedRecipes, setSuggestedRecipes] = useState<any[]>([]);
   const [fridgeIngredients, setFridgeIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,12 +42,14 @@ export default function Collection() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [collection, allRecipes, fridge] = await Promise.all([
+    const [collection, allRecipes, fridge, recipes] = await Promise.all([
       getCollectionWithDetails(),
       getRecipes(),
       getFridgeWithDetails(),
+      getUserRecipes(),
     ]);
     setUserCollection(collection);
+    setUserRecipes(recipes);
 
     const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
     setFridgeIngredients(fridgeIngs);
@@ -76,6 +83,48 @@ export default function Collection() {
       loadData();
     }, [loadData])
   );
+
+  const convertToRecipe = (userRecipe: UserRecipe): Recipe => ({
+    id: userRecipe.id,
+    name: userRecipe.name,
+    description: userRecipe.description || '',
+    cuisine: userRecipe.cuisine || 'Custom',
+    category: userRecipe.category || 'other',
+    difficulty: 'easy',
+    servings: userRecipe.servings || 1,
+    prepTime: userRecipe.prepTime || 0,
+    cookTime: userRecipe.cookTime || 0,
+    totalTime: (userRecipe.prepTime || 0) + (userRecipe.cookTime || 0),
+    images: [],
+    video: null,
+    nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 },
+    ingredients: userRecipe.ingredients.map(ing => ({
+      ...ing,
+      preparation: null,
+      optional: false,
+      images: [],
+    })),
+    instructions: userRecipe.instructions.map(inst => ({
+      ...inst,
+      time: 0,
+      equipment: [],
+      images: [],
+    })),
+    equipment: [],
+    tags: [],
+    dietaryInfo: { vegetarian: false, vegan: false, glutenFree: false, dairyFree: false },
+    author: 'Me',
+    rating: 5,
+    reviewCount: 0,
+  });
+
+  const handleToggleUserRecipeShoppingList = async (id: number) => {
+    const recipe = userRecipes.find(r => r.id === id);
+    if (recipe) {
+      await updateUserRecipe(id, { includeInShoppingList: !recipe.includeInShoppingList });
+      loadData();
+    }
+  };
 
   const isInCollection = useCallback(
     (recipeId: number) => userCollection.some((item) => item.recipeId === recipeId),
@@ -237,7 +286,7 @@ export default function Collection() {
               borderRadius: 8,
               alignItems: 'center',
             }}>
-            <Text style={{ color: '#ffffff', fontWeight: '600' }}>View Recipe</Text>
+            <Text style={{ color: '#ffffff', fontWeight: '600' }}>View</Text>
           </TouchableOpacity>
           {missingCount !== undefined && (
             <TouchableOpacity
@@ -252,7 +301,9 @@ export default function Collection() {
               style={{
                 flex: 1,
                 backgroundColor: isInCollection(recipe.id)
-                  ? '#34c759'
+                  ? isDark
+                    ? '#2c2c2e'
+                    : '#e5e5ea'
                   : isDark
                     ? '#2c2c2e'
                     : '#e5e5ea',
@@ -262,10 +313,10 @@ export default function Collection() {
               }}>
               <Text
                 style={{
-                  color: isInCollection(recipe.id) ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                  color: isDark ? '#ffffff' : '#000000',
                   fontWeight: '600',
                 }}>
-                {isInCollection(recipe.id) ? '✓ Added' : '+ Add'}
+                {isInCollection(recipe.id) ? 'Remove' : 'Add'}
               </Text>
             </TouchableOpacity>
           )}
@@ -306,7 +357,7 @@ export default function Collection() {
               fontSize: 22,
               fontWeight: '600',
             }}>
-            My Collection ({userCollection.length})
+            My Collection ({userCollection.length + userRecipes.length})
           </Text>
           <Ionicons
             name={collectionExpanded ? 'chevron-up' : 'chevron-down'}
@@ -315,7 +366,7 @@ export default function Collection() {
           />
         </TouchableOpacity>
         {collectionExpanded &&
-          (userCollection.length === 0 ? (
+          (userCollection.length === 0 && userRecipes.length === 0 ? (
             <View style={{ alignItems: 'center', marginVertical: 40 }}>
               <Ionicons name="bookmark-outline" size={64} color={isDark ? '#3a3a3c' : '#d1d1d6'} />
               <Text
@@ -329,13 +380,136 @@ export default function Collection() {
               </Text>
             </View>
           ) : (
-            userCollection.map((item) => {
-              if (!item.recipe) return null;
-              const missingCount = item.recipe.ingredients.filter(
-                (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
-              ).length;
-              return renderRecipeCard(item.recipe, missingCount, item);
-            })
+            <>
+              {userRecipes.map((userRecipe) => {
+                const recipe = convertToRecipe(userRecipe);
+                const missingCount = recipe.ingredients.filter(
+                  (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
+                ).length;
+                return (
+                  <View
+                    key={recipe.id}
+                    style={{
+                      backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                      borderRadius: 12,
+                      padding: 16,
+                      marginBottom: 12,
+                    }}>
+                    <View style={{ marginBottom: 12 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                        <Text
+                          style={{
+                            color: isDark ? '#ffffff' : '#000000',
+                            fontSize: 18,
+                            fontWeight: '600',
+                            flex: 1,
+                          }}>
+                          {recipe.name}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => handleToggleUserRecipeShoppingList(userRecipe.id)}
+                          accessible={true}
+                          accessibilityLabel={`${userRecipe.includeInShoppingList === false ? 'Include' : 'Exclude'} ${recipe.name} in shopping list`}
+                          accessibilityRole="button"
+                          style={{
+                            backgroundColor: userRecipe.includeInShoppingList === false ? (isDark ? '#2c2c2e' : '#e5e5ea') : '#34c759',
+                            paddingHorizontal: 10,
+                            paddingVertical: 6,
+                            borderRadius: 6,
+                            marginLeft: 8,
+                          }}>
+                          <Ionicons
+                            name={userRecipe.includeInShoppingList === false ? 'cart-outline' : 'cart'}
+                            size={18}
+                            color={userRecipe.includeInShoppingList === false ? (isDark ? '#8e8e93' : '#636366') : '#ffffff'}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginBottom: 8 }}>
+                        {recipe.cuisine} • {recipe.difficulty} • {recipe.totalTime} min
+                      </Text>
+                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginBottom: 8 }}>
+                        {missingCount === 0
+                          ? '✓ You have all ingredients!'
+                          : `Missing ${missingCount} ingredient${missingCount > 1 ? 's' : ''}`}
+                      </Text>
+                    </View>
+
+                    <View style={{ marginBottom: 12 }}>
+                      <Text
+                        style={{
+                          color: isDark ? '#ffffff' : '#000000',
+                          fontSize: 14,
+                          fontWeight: '600',
+                          marginBottom: 4,
+                        }}>
+                        Ingredients:
+                      </Text>
+                      {recipe.ingredients.map(
+                        (ing: { name: string; amount: number; unit: string }, idx: number) => {
+                          const hasIng = hasIngredient(ing.name, fridgeIngredients);
+                          return (
+                            <View
+                              key={idx}
+                              style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                              {!hasIng && (
+                                <Ionicons name="close" size={14} color="#ff3b30" style={{ marginRight: 4 }} />
+                              )}
+                              <Text
+                                style={{
+                                  color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
+                                  fontSize: 13,
+                                  fontStyle: hasIng ? 'normal' : 'italic',
+                                }}>
+                                {ing.amount} {ing.unit} {ing.name}
+                              </Text>
+                            </View>
+                          );
+                        }
+                      )}
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity
+                        onPress={() => setSelectedRecipe(recipe)}
+                        accessible={true}
+                        accessibilityLabel={`View ${recipe.name} recipe details`}
+                        accessibilityRole="button"
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#007aff',
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                        }}>
+                        <Text style={{ color: '#ffffff', fontWeight: '600' }}>View</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => router.push('/cookbook')}
+                        accessible={true}
+                        accessibilityLabel={`Manage ${recipe.name} in cookbook`}
+                        accessibilityRole="button"
+                        style={{
+                          flex: 1,
+                          backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                          paddingVertical: 10,
+                          borderRadius: 8,
+                          alignItems: 'center',
+                        }}>
+                        <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>Manage</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+              {userCollection.map((item) => {
+                if (!item.recipe) return null;
+                const missingCount = item.recipe.ingredients.filter(
+                  (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
+                ).length;
+                return renderRecipeCard(item.recipe, missingCount, item);
+              })}
+            </>
           ))}
 
         <TouchableOpacity

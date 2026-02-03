@@ -22,6 +22,7 @@ type RecipeDetailModalProps = {
   isInCollection: boolean;
   onClose: () => void;
   onToggleCollection: () => void;
+  hideCollectionButton?: boolean;
 };
 
 export default function RecipeDetailModal({
@@ -30,6 +31,7 @@ export default function RecipeDetailModal({
   isInCollection,
   onClose,
   onToggleCollection,
+  hideCollectionButton = false,
 }: RecipeDetailModalProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -67,25 +69,27 @@ export default function RecipeDetailModal({
             accessibilityRole="button">
             <Text style={{ color: '#007aff', fontSize: 17 }}>Close</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={onToggleCollection}
-            accessible={true}
-            accessibilityLabel={
-              isInCollection
-                ? `Remove ${recipe.name} from collection`
-                : `Add ${recipe.name} to collection`
-            }
-            accessibilityRole="button"
-            style={{
-              backgroundColor: isInCollection ? '#34c759' : '#007aff',
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 8,
-            }}>
-            <Text style={{ color: '#ffffff', fontWeight: '600' }}>
-              {isInCollection ? '✓ In Collection' : '+ Add to Collection'}
-            </Text>
-          </TouchableOpacity>
+          {!hideCollectionButton && (
+            <TouchableOpacity
+              onPress={onToggleCollection}
+              accessible={true}
+              accessibilityLabel={
+                isInCollection
+                  ? `Remove ${recipe.name} from collection`
+                  : `Add ${recipe.name} to collection`
+              }
+              accessibilityRole="button"
+              style={{
+                backgroundColor: isInCollection ? '#34c759' : '#007aff',
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 8,
+              }}>
+              <Text style={{ color: '#ffffff', fontWeight: '600' }}>
+                {isInCollection ? '✓ In Collection' : '+ Add to Collection'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>

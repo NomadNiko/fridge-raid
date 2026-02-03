@@ -16,6 +16,7 @@ import {
   removeFromFridge,
   getFridgeWithDetails,
   getCollectionWithDetails,
+  getUserRecipes,
 } from '../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types/ingredient';
@@ -42,10 +43,11 @@ export default function Fridge() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [ingredients, fridge, collection] = await Promise.all([
+    const [ingredients, fridge, collection, userRecipes] = await Promise.all([
       getIngredients(),
       getFridgeWithDetails(),
       getCollectionWithDetails(),
+      getUserRecipes(),
     ]);
     setAllIngredients(ingredients);
     setUserFridge(fridge);
@@ -68,6 +70,26 @@ export default function Fridge() {
               });
             }
             missingIngredients.get(ingName).recipes.push(item.recipe.name);
+          }
+        });
+      }
+    });
+
+    userRecipes.forEach((recipe) => {
+      if (recipe.includeInShoppingList !== false) {
+        recipe.ingredients.forEach((ing) => {
+          const matched = matchIngredient(ing.name, fridgeIngredients);
+          if (!matched) {
+            const ingName = ing.name.toLowerCase();
+            if (!missingIngredients.has(ingName)) {
+              missingIngredients.set(ingName, {
+                name: ing.name,
+                amount: ing.amount,
+                unit: ing.unit,
+                recipes: [],
+              });
+            }
+            missingIngredients.get(ingName).recipes.push(recipe.name);
           }
         });
       }

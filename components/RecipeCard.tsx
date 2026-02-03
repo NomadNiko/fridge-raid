@@ -3,15 +3,22 @@ import { Recipe } from '../types';
 import { useState, memo } from 'react';
 import ImageViewer from './ImageViewer';
 import { getRecipeImage } from '../lib/images';
+import { Ionicons } from '@expo/vector-icons';
 
 type RecipeCardProps = {
   recipe: Recipe;
   isInCollection: boolean;
   onView: () => void;
   onToggleCollection: () => void;
+  showCollectionButton?: boolean;
+  showShoppingListToggle?: boolean;
+  includeInShoppingList?: boolean;
+  onToggleShoppingList?: () => void;
+  showIngredients?: boolean;
+  fridgeIngredients?: any[];
 };
 
-function RecipeCard({ recipe, isInCollection, onView, onToggleCollection }: RecipeCardProps) {
+function RecipeCard({ recipe, isInCollection, onView, onToggleCollection, showCollectionButton = true, showShoppingListToggle = false, includeInShoppingList = true, onToggleShoppingList, showIngredients = false, fridgeIngredients = [] }: RecipeCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
@@ -57,6 +64,40 @@ function RecipeCard({ recipe, isInCollection, onView, onToggleCollection }: Reci
         </View>
       </View>
 
+      {showIngredients && recipe.ingredients && recipe.ingredients.length > 0 && (
+        <View style={{ marginTop: 12, marginBottom: 12 }}>
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 14,
+              fontWeight: '600',
+              marginBottom: 4,
+            }}>
+            Ingredients:
+          </Text>
+          {recipe.ingredients.map((ing: any, idx: number) => {
+            const hasIng = fridgeIngredients.some((fIng: any) => 
+              fIng.name?.toLowerCase() === ing.name?.toLowerCase()
+            );
+            return (
+              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                {!hasIng && (
+                  <Ionicons name="close" size={14} color="#ff3b30" style={{ marginRight: 4 }} />
+                )}
+                <Text
+                  style={{
+                    color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
+                    fontSize: 13,
+                    fontStyle: hasIng ? 'normal' : 'italic',
+                  }}>
+                  {ing.amount} {ing.unit} {ing.name}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
         <TouchableOpacity
           onPress={onView}
@@ -73,36 +114,60 @@ function RecipeCard({ recipe, isInCollection, onView, onToggleCollection }: Reci
           <Text style={{ color: '#ffffff', fontWeight: '600' }}>View</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={onToggleCollection}
-          accessible={true}
-          accessibilityLabel={
-            isInCollection
-              ? `Remove ${recipe.name} from collection`
-              : `Add ${recipe.name} to collection`
-          }
-          accessibilityRole="button"
-          style={{
-            flex: 1,
-            backgroundColor: isInCollection
-              ? isDark
-                ? '#34c759'
-                : '#34c759'
-              : isDark
-                ? '#2c2c2e'
-                : '#e5e5ea',
-            paddingVertical: 10,
-            borderRadius: 8,
-            alignItems: 'center',
-          }}>
-          <Text
+        {showShoppingListToggle && onToggleShoppingList && (
+          <TouchableOpacity
+            onPress={onToggleShoppingList}
+            accessible={true}
+            accessibilityLabel={`${includeInShoppingList ? 'Remove from' : 'Add to'} shopping list`}
+            accessibilityRole="button"
             style={{
-              color: isInCollection ? '#ffffff' : isDark ? '#ffffff' : '#000000',
-              fontWeight: '600',
+              backgroundColor: includeInShoppingList ? '#34c759' : isDark ? '#2c2c2e' : '#e5e5ea',
+              paddingHorizontal: 16,
+              paddingVertical: 10,
+              borderRadius: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
             }}>
-            {isInCollection ? '✓ In Collection' : '+ Add'}
-          </Text>
-        </TouchableOpacity>
+            <Ionicons
+              name={includeInShoppingList ? 'cart' : 'cart-outline'}
+              size={20}
+              color={includeInShoppingList ? '#ffffff' : isDark ? '#ffffff' : '#000000'}
+            />
+          </TouchableOpacity>
+        )}
+
+        {showCollectionButton && (
+          <TouchableOpacity
+            onPress={onToggleCollection}
+            accessible={true}
+            accessibilityLabel={
+              isInCollection
+                ? `Remove ${recipe.name} from collection`
+                : `Add ${recipe.name} to collection`
+            }
+            accessibilityRole="button"
+            style={{
+              flex: 1,
+              backgroundColor: isInCollection
+                ? isDark
+                  ? '#34c759'
+                  : '#34c759'
+                : isDark
+                  ? '#2c2c2e'
+                  : '#e5e5ea',
+              paddingVertical: 10,
+              borderRadius: 8,
+              alignItems: 'center',
+            }}>
+            <Text
+              style={{
+                color: isInCollection ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                fontWeight: '600',
+              }}>
+              {isInCollection ? '✓ In Collection' : '+ Add'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ImageViewer

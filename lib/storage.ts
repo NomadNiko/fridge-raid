@@ -26,6 +26,21 @@ export type UserCollectionItem = {
   includeInShoppingList?: boolean;
 };
 
+export type UserRecipe = {
+  id: number;
+  name: string;
+  description?: string;
+  ingredients: { name: string; amount: number; unit: string }[];
+  instructions: { step: number; text: string }[];
+  prepTime?: number;
+  cookTime?: number;
+  servings?: number;
+  cuisine?: string;
+  category?: string;
+  addedDate: string;
+  includeInShoppingList?: boolean;
+};
+
 const getItem = async (key: string): Promise<string | null> => {
   try {
     return await AsyncStorage.getItem(key);
@@ -54,6 +69,7 @@ export const initializeDatabase = async () => {
     const keys = await AsyncStorage.getAllKeys();
     if (!keys.includes('userFridge')) await setItem('userFridge', JSON.stringify([]));
     if (!keys.includes('userCollection')) await setItem('userCollection', JSON.stringify([]));
+    if (!keys.includes('userRecipes')) await setItem('userRecipes', JSON.stringify([]));
   } catch (e) {
     console.error('Database initialization failed:', e);
     throw e;
@@ -174,4 +190,39 @@ export const getIngredients = async () => {
     console.error('Failed to get ingredients:', e);
     return [];
   }
+};
+
+export const getUserRecipes = async (): Promise<UserRecipe[]> => {
+  try {
+    const data = await getItem('userRecipes');
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    console.error('Failed to get user recipes:', e);
+    return [];
+  }
+};
+
+export const addUserRecipe = async (recipe: Omit<UserRecipe, 'id' | 'addedDate'>) => {
+  const recipes = await getUserRecipes();
+  const newId = recipes.length > 0 ? Math.max(...recipes.map(r => r.id)) + 1 : 1;
+  const newRecipe: UserRecipe = {
+    ...recipe,
+    id: newId,
+    addedDate: new Date().toISOString(),
+    includeInShoppingList: true,
+  };
+  recipes.push(newRecipe);
+  await setItem('userRecipes', JSON.stringify(recipes));
+  return newRecipe;
+};
+
+export const updateUserRecipe = async (id: number, updates: Partial<Omit<UserRecipe, 'id' | 'addedDate'>>) => {
+  const recipes = await getUserRecipes();
+  const updated = recipes.map(r => r.id === id ? { ...r, ...updates } : r);
+  await setItem('userRecipes', JSON.stringify(updated));
+};
+
+export const deleteUserRecipe = async (id: number) => {
+  const recipes = (await getUserRecipes()).filter(r => r.id !== id);
+  await setItem('userRecipes', JSON.stringify(recipes));
 };
