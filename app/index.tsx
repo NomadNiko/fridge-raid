@@ -101,6 +101,24 @@ export default function Home() {
     }
   };
 
+  // Recipe navigation
+  const selectedRecipeIndex = useMemo(() => {
+    if (!selectedRecipe) return -1;
+    return filteredRecipes.findIndex((r) => r.id === selectedRecipe.id);
+  }, [selectedRecipe, filteredRecipes]);
+
+  const navigateToPreviousRecipe = () => {
+    if (selectedRecipeIndex > 0) {
+      setSelectedRecipe(filteredRecipes[selectedRecipeIndex - 1]);
+    }
+  };
+
+  const navigateToNextRecipe = () => {
+    if (selectedRecipeIndex < filteredRecipes.length - 1) {
+      setSelectedRecipe(filteredRecipes[selectedRecipeIndex + 1]);
+    }
+  };
+
   if (loading) {
     return (
       <View
@@ -339,6 +357,10 @@ export default function Home() {
         onToggleCollection={() => {
           if (selectedRecipe) toggleCollection(selectedRecipe.id);
         }}
+        onPrevious={navigateToPreviousRecipe}
+        onNext={navigateToNextRecipe}
+        hasPrevious={selectedRecipeIndex > 0}
+        hasNext={selectedRecipeIndex < filteredRecipes.length - 1}
       />
     </View>
   );

@@ -67,6 +67,9 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
 
 Rules:
 - For ingredients: amount should be a string number (e.g., "1", "0.5", "2"), unit should be the measurement unit (cup, tbsp, tsp, oz, lb, g, ml, etc.), name is the ingredient name
+- IMPORTANT: Keep ALL ingredient entries as separate items, even if the same ingredient appears multiple times with different amounts (e.g., "1 tsp salt" for seasoning and "salt and pepper to taste" should be TWO separate entries, not merged)
+- DO NOT deduplicate or combine ingredients - preserve each line from the recipe exactly as a separate entry
+- For compound ingredients like "salt and pepper", split into separate entries: one for "salt" and one for "pepper"
 - For times: extract just the number in minutes as a string (e.g., "15" not "15 minutes")
 - For servings: just the number as a string
 - For category: use one of: breakfast, lunch, dinner, snack, dessert, appetizer

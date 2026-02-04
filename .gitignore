@@ -12,7 +12,7 @@ npm-debug.*
 web-build/
 ios
 android
-
+scripts/
 # macOS
 .DS_Store
 

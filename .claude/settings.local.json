@@ -7,7 +7,8 @@
       "WebFetch(domain:docs.expo.dev)",
       "Bash(npx tsc:*)",
       "Bash(npm run lint)",
-      "Bash(npm run format:*)"
+      "Bash(npm run format:*)",
+      "Bash(node scripts/find-long-steps.js:*)"
     ]
   }
 }

@@ -33,7 +33,7 @@ interface Props {
   }) => void;
 }
 
-type ScanStatus = 'camera' | 'processing' | 'parsing' | 'preview' | 'error';
+type ScanStatus = 'page-select' | 'camera' | 'processing' | 'parsing' | 'preview' | 'error';
 
 export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }: Props) {
   const colorScheme = useColorScheme();
@@ -42,11 +42,16 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
 
-  const [status, setStatus] = useState<ScanStatus>('camera');
+  const [status, setStatus] = useState<ScanStatus>('page-select');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [parsedRecipe, setParsedRecipe] = useState<FormattedRecipe | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+
+  // Multi-page support
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [capturedImages, setCapturedImages] = useState<string[]>([]);
 
   // Reset state when modal becomes visible
   useEffect(() => {
@@ -56,16 +61,83 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
   }, [visible]);
 
   const resetState = () => {
-    setStatus('camera');
+    setStatus('page-select');
     setImageUri(null);
     setParsedRecipe(null);
     setError(null);
     setIsCapturing(false);
+    setTotalPages(1);
+    setCurrentPage(1);
+    setCapturedImages([]);
   };
 
   const handleClose = () => {
     resetState();
     onClose();
+  };
+
+  const handlePageSelect = (pages: number) => {
+    setTotalPages(pages);
+    setCurrentPage(1);
+    setCapturedImages([]);
+    setStatus('camera');
+  };
+
+  const processAllImages = async (imageUris: string[]) => {
+    setStatus('processing');
+    setError(null);
+
+    try {
+      // Step 1: OCR all images and combine text
+      const allTexts: string[] = [];
+
+      for (let i = 0; i < imageUris.length; i++) {
+        const ocrResult: OCRResult = await performOCRWithRetry(imageUris[i]);
+
+        if (!ocrResult.success) {
+          setError(`OCR failed on page ${i + 1}: ${ocrResult.error}`);
+          setStatus('error');
+          return;
+        }
+
+        if (ocrResult.rawText && ocrResult.rawText.trim().length > 0) {
+          allTexts.push(ocrResult.rawText);
+        }
+      }
+
+      const combinedText = allTexts.join('\n\n--- Page Break ---\n\n');
+
+      if (combinedText.trim().length === 0) {
+        setError('No text detected. Please try again with clearer photos of the recipe.');
+        setStatus('error');
+        return;
+      }
+
+      // Step 2: Format with Bedrock AI
+      setStatus('parsing');
+      const formatResult = await formatRecipeWithRetry(combinedText);
+
+      if (!formatResult.success || !formatResult.recipe) {
+        setError(formatResult.error || 'Failed to parse recipe');
+        setStatus('error');
+        return;
+      }
+
+      if (
+        formatResult.recipe.ingredients.length === 0 &&
+        formatResult.recipe.instructions.length === 0
+      ) {
+        setError('Could not identify recipe content. Please try clearer photos.');
+        setStatus('error');
+        return;
+      }
+
+      setParsedRecipe(formatResult.recipe);
+      setStatus('preview');
+    } catch (err) {
+      setError(`Processing failed: ${err}`);
+      setStatus('error');
+    }
   };
 
   const capturePhoto = async () => {
@@ -78,8 +150,17 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
       });
 
       if (photo?.uri) {
+        const newCapturedImages = [...capturedImages, photo.uri];
+        setCapturedImages(newCapturedImages);
         setImageUri(photo.uri);
-        await processImage(photo.uri);
+
+        if (currentPage < totalPages) {
+          // More pages to capture
+          setCurrentPage(currentPage + 1);
+        } else {
+          // All pages captured, process all images
+          await processAllImages(newCapturedImages);
+        }
       }
     } catch (err) {
       setError(`Failed to capture photo: ${err}`);
@@ -246,10 +327,70 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
 
   const renderContent = () => {
     switch (status) {
+      case 'page-select':
+        return (
+          <View style={styles.centeredContent}>
+            <Ionicons name="document-text-outline" size={64} color="#007aff" />
+            <Text style={[styles.title, { color: isDark ? '#fff' : '#000' }]}>
+              How many pages is the recipe?
+            </Text>
+            <Text style={[styles.subtitle, { color: isDark ? '#8e8e93' : '#636366' }]}>
+              Select the number of pages you need to scan
+            </Text>
+            <View style={styles.pageSelectContainer}>
+              {[1, 2, 3, 4].map((num) => (
+                <TouchableOpacity
+                  key={num}
+                  onPress={() => handlePageSelect(num)}
+                  style={[
+                    styles.pageSelectButton,
+                    { backgroundColor: isDark ? '#2c2c2e' : '#f2f2f7' },
+                  ]}>
+                  <Text style={[styles.pageSelectNumber, { color: isDark ? '#fff' : '#000' }]}>
+                    {num}
+                  </Text>
+                  <Text style={[styles.pageSelectLabel, { color: isDark ? '#8e8e93' : '#636366' }]}>
+                    {num === 1 ? 'page' : 'pages'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        );
+
       case 'camera':
         return (
           <View style={styles.cameraContainer}>
             <CameraView ref={cameraRef} style={styles.camera} facing="back" autofocus="off" />
+
+            {/* Page progress indicator */}
+            {totalPages > 1 && (
+              <View style={styles.pageProgress}>
+                <Text style={styles.pageProgressText}>
+                  Page {currentPage} of {totalPages}
+                </Text>
+                <View style={styles.pageThumbnails}>
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <View key={i}>
+                      {capturedImages[i] ? (
+                        <Image
+                          source={{ uri: capturedImages[i] }}
+                          style={styles.pageThumbnail}
+                        />
+                      ) : (
+                        <View
+                          style={[
+                            styles.pageThumbnailPlaceholder,
+                            i === currentPage - 1 && { borderColor: '#007aff', borderStyle: 'solid' },
+                          ]}
+                        />
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
             {/* Viewfinder overlay - positioned absolutely on top of camera */}
             <View style={styles.overlay} pointerEvents="none">
               <View style={styles.overlayTop} />
@@ -264,15 +405,23 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
                 <View style={styles.overlaySide} />
               </View>
               <View style={styles.overlayBottom}>
-                <Text style={styles.instructionText}>Position the recipe within the frame</Text>
+                <Text style={styles.instructionText}>
+                  {totalPages > 1
+                    ? `Position page ${currentPage} of ${totalPages} within the frame`
+                    : 'Position the recipe within the frame'}
+                </Text>
               </View>
             </View>
 
             {/* Camera controls */}
             <View style={styles.cameraControls}>
-              <TouchableOpacity onPress={pickFromLibrary} style={styles.libraryButton}>
-                <Ionicons name="images" size={28} color="#fff" />
-              </TouchableOpacity>
+              {totalPages === 1 ? (
+                <TouchableOpacity onPress={pickFromLibrary} style={styles.libraryButton}>
+                  <Ionicons name="images" size={28} color="#fff" />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.placeholder} />
+              )}
 
               <TouchableOpacity
                 onPress={capturePhoto}
@@ -292,12 +441,24 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
       case 'parsing':
         return (
           <View style={styles.centeredContent}>
-            {imageUri && (
-              <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="cover" />
+            {capturedImages.length > 1 ? (
+              <View style={[styles.pageThumbnails, { marginBottom: 24 }]}>
+                {capturedImages.map((uri, i) => (
+                  <Image key={i} source={{ uri }} style={styles.pageThumbnail} />
+                ))}
+              </View>
+            ) : (
+              imageUri && (
+                <Image source={{ uri: imageUri }} style={styles.previewImage} resizeMode="cover" />
+              )
             )}
             <ActivityIndicator size="large" color="#007aff" />
             <Text style={[styles.statusText, { color: isDark ? '#fff' : '#000' }]}>
-              {status === 'processing' ? 'Scanning text...' : 'Extracting recipe...'}
+              {status === 'processing'
+                ? capturedImages.length > 1
+                  ? `Scanning ${capturedImages.length} pages...`
+                  : 'Scanning text...'
+                : 'Extracting recipe...'}
             </Text>
           </View>
         );
@@ -485,7 +646,11 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
               styles.headerTitle,
               { color: status === 'camera' ? '#fff' : isDark ? '#fff' : '#000' },
             ]}>
-            {status === 'preview' ? 'Review Recipe' : 'Scan Recipe'}
+            {status === 'preview'
+              ? 'Review Recipe'
+              : status === 'page-select'
+                ? 'Scan Recipe'
+                : `Scan Recipe${totalPages > 1 ? ` (${currentPage}/${totalPages})` : ''}`}
           </Text>
           <TouchableOpacity onPress={handleClose}>
             <Ionicons
@@ -763,5 +928,64 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontWeight: '600',
     fontSize: 16,
+  },
+  // Page selection styles
+  pageSelectContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 32,
+  },
+  pageSelectButton: {
+    width: 70,
+    height: 80,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pageSelectNumber: {
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  pageSelectLabel: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  // Page progress indicator styles
+  pageProgress: {
+    position: 'absolute',
+    top: 100,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  pageProgressText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  pageThumbnails: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  pageThumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#007aff',
+  },
+  pageThumbnailPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderStyle: 'dashed',
   },
 });

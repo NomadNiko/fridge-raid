@@ -23,6 +23,11 @@ type RecipeDetailModalProps = {
   onClose: () => void;
   onToggleCollection: () => void;
   hideCollectionButton?: boolean;
+  // Navigation props (optional)
+  onPrevious?: () => void;
+  onNext?: () => void;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
 };
 
 export default function RecipeDetailModal({
@@ -32,6 +37,10 @@ export default function RecipeDetailModal({
   onClose,
   onToggleCollection,
   hideCollectionButton = false,
+  onPrevious,
+  onNext,
+  hasPrevious = false,
+  hasNext = false,
 }: RecipeDetailModalProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -169,17 +178,6 @@ export default function RecipeDetailModal({
               }}>
               <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>📊 {recipe.difficulty}</Text>
             </View>
-            <View
-              style={{
-                backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 8,
-              }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
-                ⭐ {recipe.rating.toFixed(1)}
-              </Text>
-            </View>
           </View>
 
           <Text
@@ -219,7 +217,7 @@ export default function RecipeDetailModal({
                       flex: 1,
                       fontStyle: hasIng ? 'normal' : 'italic',
                     }}>
-                    {ing.amount} {ing.unit} {ing.name}
+                    {ing.amount ? `${ing.amount} ` : ''}{ing.unit ? `${ing.unit} ` : ''}{ing.name}
                     {ing.preparation && `, ${ing.preparation}`}
                     {ing.optional && ' (optional)'}
                   </Text>
@@ -254,53 +252,56 @@ export default function RecipeDetailModal({
             </View>
           ))}
 
-          <Text
-            style={{
-              color: isDark ? '#ffffff' : '#000000',
-              fontSize: 22,
-              fontWeight: '600',
-              marginTop: 24,
-              marginBottom: 12,
-            }}>
-            Equipment Needed
-          </Text>
-          {recipe.equipment.map((eq: { id: string; name: string; alternatives: string[] }) => (
-            <View key={eq.id} style={{ flexDirection: 'row', marginBottom: 8 }}>
-              <Text style={{ color: isDark ? '#8e8e93' : '#636366', marginRight: 8 }}>•</Text>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', flex: 1 }}>
-                {eq.name}
-                {eq.alternatives.length > 0 && ` (or ${eq.alternatives.join(', ')})`}
-              </Text>
-            </View>
-          ))}
-
-          <Text
-            style={{
-              color: isDark ? '#ffffff' : '#000000',
-              fontSize: 22,
-              fontWeight: '600',
-              marginTop: 24,
-              marginBottom: 12,
-            }}>
-            Nutrition (per serving)
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            <Text style={{ color: isDark ? '#8e8e93' : '#636366' }}>
-              Calories: {recipe.nutrition.calories}
-            </Text>
-            <Text style={{ color: isDark ? '#8e8e93' : '#636366' }}>
-              Protein: {recipe.nutrition.protein}g
-            </Text>
-            <Text style={{ color: isDark ? '#8e8e93' : '#636366' }}>
-              Carbs: {recipe.nutrition.carbs}g
-            </Text>
-            <Text style={{ color: isDark ? '#8e8e93' : '#636366' }}>
-              Fat: {recipe.nutrition.fat}g
-            </Text>
-          </View>
-
           <View style={{ height: 40 }} />
         </ScrollView>
+
+        {/* Navigation bar */}
+        {(onPrevious || onNext) && (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderTopWidth: 1,
+              borderTopColor: isDark ? '#1c1c1e' : '#e5e5ea',
+            }}>
+            <TouchableOpacity
+              onPress={onPrevious}
+              disabled={!hasPrevious}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                opacity: hasPrevious ? 1 : 0.3,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+              }}
+              accessible={true}
+              accessibilityLabel="Previous recipe"
+              accessibilityRole="button">
+              <Ionicons name="chevron-back" size={24} color="#007aff" />
+              <Text style={{ color: '#007aff', fontSize: 16, marginLeft: 4 }}>Previous</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={onNext}
+              disabled={!hasNext}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                opacity: hasNext ? 1 : 0.3,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+              }}
+              accessible={true}
+              accessibilityLabel="Next recipe"
+              accessibilityRole="button">
+              <Text style={{ color: '#007aff', fontSize: 16, marginRight: 4 }}>Next</Text>
+              <Ionicons name="chevron-forward" size={24} color="#007aff" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <ImageViewer
