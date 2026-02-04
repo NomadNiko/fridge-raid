@@ -18,7 +18,18 @@ type RecipeCardProps = {
   fridgeIngredients?: any[];
 };
 
-function RecipeCard({ recipe, isInCollection, onView, onToggleCollection, showCollectionButton = true, showShoppingListToggle = false, includeInShoppingList = true, onToggleShoppingList, showIngredients = false, fridgeIngredients = [] }: RecipeCardProps) {
+function RecipeCard({
+  recipe,
+  isInCollection,
+  onView,
+  onToggleCollection,
+  showCollectionButton = true,
+  showShoppingListToggle = false,
+  includeInShoppingList = true,
+  onToggleShoppingList,
+  showIngredients = false,
+  fridgeIngredients = [],
+}: RecipeCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
@@ -76,11 +87,13 @@ function RecipeCard({ recipe, isInCollection, onView, onToggleCollection, showCo
             Ingredients:
           </Text>
           {recipe.ingredients.map((ing: any, idx: number) => {
-            const hasIng = fridgeIngredients.some((fIng: any) => 
-              fIng.name?.toLowerCase() === ing.name?.toLowerCase()
+            const hasIng = fridgeIngredients.some(
+              (fIng: any) => fIng.name?.toLowerCase() === ing.name?.toLowerCase()
             );
             return (
-              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+              <View
+                key={idx}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                 {!hasIng && (
                   <Ionicons name="close" size={14} color="#ff3b30" style={{ marginRight: 4 }} />
                 )}
@@ -148,23 +161,17 @@ function RecipeCard({ recipe, isInCollection, onView, onToggleCollection, showCo
             accessibilityRole="button"
             style={{
               flex: 1,
-              backgroundColor: isInCollection
-                ? isDark
-                  ? '#34c759'
-                  : '#34c759'
-                : isDark
-                  ? '#2c2c2e'
-                  : '#e5e5ea',
+              backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
               paddingVertical: 10,
               borderRadius: 8,
               alignItems: 'center',
             }}>
             <Text
               style={{
-                color: isInCollection ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                color: isDark ? '#ffffff' : '#000000',
                 fontWeight: '600',
               }}>
-              {isInCollection ? '✓ In Collection' : '+ Add'}
+              {isInCollection ? 'Remove' : 'Add'}
             </Text>
           </TouchableOpacity>
         )}

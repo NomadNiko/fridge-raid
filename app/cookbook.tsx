@@ -12,9 +12,17 @@ import {
 } from 'react-native';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { getUserRecipes, addUserRecipe, deleteUserRecipe, updateUserRecipe, UserRecipe, getFridgeWithDetails } from '../lib/storage';
+import {
+  getUserRecipes,
+  addUserRecipe,
+  deleteUserRecipe,
+  updateUserRecipe,
+  UserRecipe,
+  getFridgeWithDetails,
+} from '../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import RecipeDetailModal from '../components/RecipeDetailModal';
+import RecipeScannerModal from '../components/RecipeScannerModal';
 import { Recipe } from '../types';
 import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
@@ -26,6 +34,7 @@ export default function Cookbook() {
   const [fridgeIngredients, setFridgeIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   // Form state
@@ -45,7 +54,7 @@ export default function Cookbook() {
     setLoading(true);
     const [userRecipes, fridge] = await Promise.all([getUserRecipes(), getFridgeWithDetails()]);
     setRecipes(userRecipes);
-    const fridgeIngs = fridge.map(item => item.ingredient).filter(Boolean);
+    const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
     setFridgeIngredients(fridgeIngs);
     setLoading(false);
   }, []);
@@ -74,8 +83,8 @@ export default function Cookbook() {
       return;
     }
 
-    const validIngredients = ingredients.filter(i => i.name.trim());
-    const validInstructions = instructions.filter(i => i.trim());
+    const validIngredients = ingredients.filter((i) => i.name.trim());
+    const validInstructions = instructions.filter((i) => i.trim());
 
     if (validIngredients.length === 0) {
       Alert.alert('Error', 'At least one ingredient is required');
@@ -90,7 +99,7 @@ export default function Cookbook() {
     await addUserRecipe({
       name: name.trim(),
       description: description.trim() || undefined,
-      ingredients: validIngredients.map(i => ({
+      ingredients: validIngredients.map((i) => ({
         name: i.name.trim(),
         amount: parseFloat(i.amount) || 0,
         unit: i.unit.trim(),
@@ -137,15 +146,14 @@ export default function Cookbook() {
     cookTime: userRecipe.cookTime || 0,
     totalTime: (userRecipe.prepTime || 0) + (userRecipe.cookTime || 0),
     images: [],
-    video: null,
-    nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, sodium: 0 },
-    ingredients: userRecipe.ingredients.map(ing => ({
+    nutrition: { calories: 0, protein: 0, carbs: 0, fat: 0 },
+    ingredients: userRecipe.ingredients.map((ing) => ({
       ...ing,
       preparation: null,
       optional: false,
       images: [],
     })),
-    instructions: userRecipe.instructions.map(inst => ({
+    instructions: userRecipe.instructions.map((inst) => ({
       ...inst,
       time: 0,
       equipment: [],
@@ -154,17 +162,44 @@ export default function Cookbook() {
     equipment: [],
     tags: [],
     dietaryInfo: { vegetarian: false, vegan: false, glutenFree: false, dairyFree: false },
-    author: 'Me',
     rating: 5,
-    reviewCount: 0,
   });
 
   const handleToggleShoppingList = async (id: number) => {
-    const recipe = recipes.find(r => r.id === id);
+    const recipe = recipes.find((r) => r.id === id);
     if (recipe) {
       await updateUserRecipe(id, { includeInShoppingList: !recipe.includeInShoppingList });
       loadRecipes();
     }
+  };
+
+  const handleRecipeScanned = (scannedRecipe: {
+    name: string;
+    description: string;
+    ingredients: { name: string; amount: string; unit: string }[];
+    instructions: string[];
+    prepTime: string;
+    cookTime: string;
+    servings: string;
+    cuisine: string;
+    category: string;
+  }) => {
+    // Populate form with scanned data
+    setName(scannedRecipe.name);
+    setDescription(scannedRecipe.description);
+    setIngredients(
+      scannedRecipe.ingredients.length > 0
+        ? scannedRecipe.ingredients
+        : [{ name: '', amount: '', unit: '' }]
+    );
+    setInstructions(scannedRecipe.instructions.length > 0 ? scannedRecipe.instructions : ['']);
+    setPrepTime(scannedRecipe.prepTime);
+    setCookTime(scannedRecipe.cookTime);
+    setServings(scannedRecipe.servings);
+    setCuisine(scannedRecipe.cuisine);
+    setCategory(scannedRecipe.category);
+    // Show the form with pre-filled data
+    setShowForm(true);
   };
 
   if (loading) {
@@ -192,18 +227,28 @@ export default function Cookbook() {
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets={true}
           keyboardDismissMode="on-drag"
-          scrollEventThrottle={16}
-          extraScrollHeight={15}>
+          scrollEventThrottle={16}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 22, fontWeight: '600' }}>
+            <Text
+              style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 22, fontWeight: '600' }}>
               Add Recipe
             </Text>
-            <TouchableOpacity onPress={() => { resetForm(); setShowForm(false); }}>
+            <TouchableOpacity
+              onPress={() => {
+                resetForm();
+                setShowForm(false);
+              }}>
               <Ionicons name="close" size={28} color={isDark ? '#ffffff' : '#000000'} />
             </TouchableOpacity>
           </View>
 
-          <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 16,
+              fontWeight: '600',
+              marginBottom: 8,
+            }}>
             Recipe Name *
           </Text>
           <TextInput
@@ -220,7 +265,13 @@ export default function Cookbook() {
             }}
           />
 
-          <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 16,
+              fontWeight: '600',
+              marginBottom: 8,
+            }}>
             Description
           </Text>
           <TextInput
@@ -242,7 +293,10 @@ export default function Cookbook() {
 
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>Prep (min)</Text>
+              <Text
+                style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>
+                Prep (min)
+              </Text>
               <TextInput
                 value={prepTime}
                 onChangeText={setPrepTime}
@@ -258,7 +312,10 @@ export default function Cookbook() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>Cook (min)</Text>
+              <Text
+                style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>
+                Cook (min)
+              </Text>
               <TextInput
                 value={cookTime}
                 onChangeText={setCookTime}
@@ -274,7 +331,10 @@ export default function Cookbook() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>Servings</Text>
+              <Text
+                style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>
+                Servings
+              </Text>
               <TextInput
                 value={servings}
                 onChangeText={setServings}
@@ -293,7 +353,10 @@ export default function Cookbook() {
 
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>Cuisine</Text>
+              <Text
+                style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>
+                Cuisine
+              </Text>
               <TextInput
                 value={cuisine}
                 onChangeText={setCuisine}
@@ -308,7 +371,10 @@ export default function Cookbook() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>Category</Text>
+              <Text
+                style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 4 }}>
+                Category
+              </Text>
               <TextInput
                 value={category}
                 onChangeText={setCategory}
@@ -324,7 +390,13 @@ export default function Cookbook() {
             </View>
           </View>
 
-          <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 16,
+              fontWeight: '600',
+              marginBottom: 8,
+            }}>
             Ingredients *
           </Text>
           {ingredients.map((ing, idx) => (
@@ -402,7 +474,13 @@ export default function Cookbook() {
             <Text style={{ color: '#007aff', fontWeight: '600' }}>+ Add Ingredient</Text>
           </TouchableOpacity>
 
-          <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '600', marginBottom: 8 }}>
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 16,
+              fontWeight: '600',
+              marginBottom: 8,
+            }}>
             Instructions *
           </Text>
           {instructions.map((inst, idx) => (
@@ -469,24 +547,49 @@ export default function Cookbook() {
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff' }}>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 16,
+          }}>
           <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 22, fontWeight: '600' }}>
             My Cookbook ({recipes.length})
           </Text>
-          <TouchableOpacity
-            onPress={() => setShowForm(true)}
-            style={{
-              backgroundColor: '#007aff',
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              borderRadius: 8,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 4,
-            }}>
-            <Ionicons name="add" size={20} color="#ffffff" />
-            <Text style={{ color: '#ffffff', fontWeight: '600' }}>Add Recipe</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => setShowScanner(true)}
+              accessible={true}
+              accessibilityLabel="Scan a recipe with camera"
+              accessibilityRole="button"
+              style={{
+                backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+              }}>
+              <Ionicons name="camera" size={20} color={isDark ? '#ffffff' : '#000000'} />
+              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>Scan</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowForm(true)}
+              style={{
+                backgroundColor: '#007aff',
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+              }}>
+              <Ionicons name="add" size={20} color="#ffffff" />
+              <Text style={{ color: '#ffffff', fontWeight: '600' }}>Add</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {recipes.length === 0 ? (
@@ -527,7 +630,13 @@ export default function Cookbook() {
                   marginBottom: 12,
                 }}>
                 <View style={{ marginBottom: 12 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      marginBottom: 4,
+                    }}>
                     <Text
                       style={{
                         color: isDark ? '#ffffff' : '#000000',
@@ -543,7 +652,12 @@ export default function Cookbook() {
                       accessibilityLabel={`${recipe.includeInShoppingList === false ? 'Include' : 'Exclude'} ${recipeObj.name} in shopping list`}
                       accessibilityRole="button"
                       style={{
-                        backgroundColor: recipe.includeInShoppingList === false ? (isDark ? '#2c2c2e' : '#e5e5ea') : '#34c759',
+                        backgroundColor:
+                          recipe.includeInShoppingList === false
+                            ? isDark
+                              ? '#2c2c2e'
+                              : '#e5e5ea'
+                            : '#34c759',
                         paddingHorizontal: 10,
                         paddingVertical: 6,
                         borderRadius: 6,
@@ -552,14 +666,30 @@ export default function Cookbook() {
                       <Ionicons
                         name={recipe.includeInShoppingList === false ? 'cart-outline' : 'cart'}
                         size={18}
-                        color={recipe.includeInShoppingList === false ? (isDark ? '#8e8e93' : '#636366') : '#ffffff'}
+                        color={
+                          recipe.includeInShoppingList === false
+                            ? isDark
+                              ? '#8e8e93'
+                              : '#636366'
+                            : '#ffffff'
+                        }
                       />
                     </TouchableOpacity>
                   </View>
-                  <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginBottom: 8 }}>
+                  <Text
+                    style={{
+                      color: isDark ? '#8e8e93' : '#636366',
+                      fontSize: 14,
+                      marginBottom: 8,
+                    }}>
                     {recipeObj.cuisine} • {recipeObj.difficulty} • {recipeObj.totalTime} min
                   </Text>
-                  <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginBottom: 8 }}>
+                  <Text
+                    style={{
+                      color: isDark ? '#8e8e93' : '#636366',
+                      fontSize: 14,
+                      marginBottom: 8,
+                    }}>
                     {missingCount === 0
                       ? '✓ You have all ingredients!'
                       : `Missing ${missingCount} ingredient${missingCount > 1 ? 's' : ''}`}
@@ -584,7 +714,12 @@ export default function Cookbook() {
                           key={idx}
                           style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                           {!hasIng && (
-                            <Ionicons name="close" size={14} color="#ff3b30" style={{ marginRight: 4 }} />
+                            <Ionicons
+                              name="close"
+                              size={14}
+                              color="#ff3b30"
+                              style={{ marginRight: 4 }}
+                            />
                           )}
                           <Text
                             style={{
@@ -645,6 +780,12 @@ export default function Cookbook() {
           if (selectedRecipe) handleDelete(selectedRecipe.id, selectedRecipe.name);
         }}
         hideCollectionButton={true}
+      />
+
+      <RecipeScannerModal
+        visible={showScanner}
+        onClose={() => setShowScanner(false)}
+        onRecipeScanned={handleRecipeScanned}
       />
     </View>
   );

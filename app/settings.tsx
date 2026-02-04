@@ -4,20 +4,29 @@ import { APP_CONFIG } from '../config/app';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { getUserFridge, getUserCollection } from '../lib/storage';
+import { getUserFridge, getUserCollection, getUserRecipes, getCustomIngredients } from '../lib/storage';
 
 export default function Settings() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [fridgeCount, setFridgeCount] = useState(0);
   const [collectionCount, setCollectionCount] = useState(0);
+  const [customRecipesCount, setCustomRecipesCount] = useState(0);
+  const [customIngredientsCount, setCustomIngredientsCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       const loadCounts = async () => {
-        const [fridge, collection] = await Promise.all([getUserFridge(), getUserCollection()]);
+        const [fridge, collection, userRecipes, customIngredients] = await Promise.all([
+          getUserFridge(),
+          getUserCollection(),
+          getUserRecipes(),
+          getCustomIngredients(),
+        ]);
         setFridgeCount(fridge.length);
         setCollectionCount(collection.length);
+        setCustomRecipesCount(userRecipes.length);
+        setCustomIngredientsCount(customIngredients.length);
       };
       loadCounts();
     }, [])
@@ -38,7 +47,7 @@ export default function Settings() {
   const handleResetData = () => {
     Alert.alert(
       'Reset All Data',
-      'This will clear your fridge and collection. This action cannot be undone.',
+      'This will clear your fridge, collection, and custom recipes. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -48,8 +57,12 @@ export default function Settings() {
             try {
               await AsyncStorage.setItem('userFridge', JSON.stringify([]));
               await AsyncStorage.setItem('userCollection', JSON.stringify([]));
+              await AsyncStorage.setItem('userRecipes', JSON.stringify([]));
+              await AsyncStorage.setItem('customIngredients', JSON.stringify([]));
               setFridgeCount(0);
               setCollectionCount(0);
+              setCustomRecipesCount(0);
+              setCustomIngredientsCount(0);
               Alert.alert('Success', 'All data has been reset');
             } catch {
               Alert.alert('Error', 'Failed to reset data');
@@ -88,12 +101,28 @@ export default function Settings() {
               {fridgeCount}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
               Saved Recipes:
             </Text>
             <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14 }}>
               {collectionCount}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
+              Custom Recipes:
+            </Text>
+            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14 }}>
+              {customRecipesCount}
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
+              Custom Ingredients:
+            </Text>
+            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14 }}>
+              {customIngredientsCount}
             </Text>
           </View>
         </View>

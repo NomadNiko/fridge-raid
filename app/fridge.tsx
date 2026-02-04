@@ -6,7 +6,6 @@ import {
   useColorScheme,
   ActivityIndicator,
   ScrollView,
-  Image,
 } from 'react-native';
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -17,11 +16,15 @@ import {
   getFridgeWithDetails,
   getCollectionWithDetails,
   getUserRecipes,
+  getCustomIngredients,
+  addCustomToFridge,
+  removeCustomFromFridge,
+  findOrCreateCustomIngredient,
+  CustomIngredient,
 } from '../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types/ingredient';
-import { getIngredientImage } from '../lib/ingredientImages';
-import { matchIngredient } from '../lib/ingredientMatcher';
+import { matchIngredient, findBuiltInIngredient, findCustomIngredient } from '../lib/ingredientMatcher';
 import IngredientCard from '../components/IngredientCard';
 
 const ITEMS_PER_PAGE = 10;
@@ -31,6 +34,7 @@ export default function Fridge() {
   const isDark = colorScheme === 'dark';
   const [search, setSearch] = useState('');
   const [allIngredients, setAllIngredients] = useState<Ingredient[]>([]);
+  const [customIngredients, setCustomIngredients] = useState<CustomIngredient[]>([]);
   const [userFridge, setUserFridge] = useState<any[]>([]);
   const [shoppingList, setShoppingList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,13 +47,15 @@ export default function Fridge() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [ingredients, fridge, collection, userRecipes] = await Promise.all([
+    const [ingredients, custom, fridge, collection, userRecipes] = await Promise.all([
       getIngredients(),
+      getCustomIngredients(),
       getFridgeWithDetails(),
       getCollectionWithDetails(),
       getUserRecipes(),
     ]);
     setAllIngredients(ingredients);
+    setCustomIngredients(custom);
     setUserFridge(fridge);
 
     const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
@@ -113,7 +119,8 @@ export default function Fridge() {
             return (
               ing.name.toLowerCase().includes(query) ||
               ing.category.toLowerCase().includes(query) ||
-              (ing.alternativeNames && ing.alternativeNames.some((alt: string) => alt.toLowerCase().includes(query)))
+              (ing.alternativeNames &&
+                ing.alternativeNames.some((alt: string) => alt.toLowerCase().includes(query)))
             );
           })
         : [],
@@ -153,9 +160,10 @@ export default function Fridge() {
     toggleInProgress.current.add(ingredientId);
     try {
       await addToFridge(ingredientId);
-      const [fridge, collection] = await Promise.all([
+      const [fridge, collection, userRecipes] = await Promise.all([
         getFridgeWithDetails(),
         getCollectionWithDetails(),
+        getUserRecipes(),
       ]);
       setUserFridge(fridge);
 
@@ -177,6 +185,26 @@ export default function Fridge() {
                 });
               }
               missingIngredients.get(ingName).recipes.push(item.recipe.name);
+            }
+          });
+        }
+      });
+
+      userRecipes.forEach((recipe) => {
+        if (recipe.includeInShoppingList !== false) {
+          recipe.ingredients.forEach((ing) => {
+            const matched = matchIngredient(ing.name, fridgeIngredients);
+            if (!matched) {
+              const ingName = ing.name.toLowerCase();
+              if (!missingIngredients.has(ingName)) {
+                missingIngredients.set(ingName, {
+                  name: ing.name,
+                  amount: ing.amount,
+                  unit: ing.unit,
+                  recipes: [],
+                });
+              }
+              missingIngredients.get(ingName).recipes.push(recipe.name);
             }
           });
         }
@@ -188,14 +216,20 @@ export default function Fridge() {
     }
   };
 
-  const handleRemoveFromFridge = async (ingredientId: number) => {
-    if (toggleInProgress.current.has(ingredientId)) return;
-    toggleInProgress.current.add(ingredientId);
+  const handleRemoveFromFridge = async (ingredientId: number, isCustom?: boolean) => {
+    const key = isCustom ? `custom-${ingredientId}` : ingredientId;
+    if (toggleInProgress.current.has(key as number)) return;
+    toggleInProgress.current.add(key as number);
     try {
-      await removeFromFridge(ingredientId);
-      const [fridge, collection] = await Promise.all([
+      if (isCustom) {
+        await removeCustomFromFridge(ingredientId);
+      } else {
+        await removeFromFridge(ingredientId);
+      }
+      const [fridge, collection, userRecipes] = await Promise.all([
         getFridgeWithDetails(),
         getCollectionWithDetails(),
+        getUserRecipes(),
       ]);
       setUserFridge(fridge);
 
@@ -222,9 +256,153 @@ export default function Fridge() {
         }
       });
 
+      userRecipes.forEach((recipe) => {
+        if (recipe.includeInShoppingList !== false) {
+          recipe.ingredients.forEach((ing) => {
+            const matched = matchIngredient(ing.name, fridgeIngredients);
+            if (!matched) {
+              const ingName = ing.name.toLowerCase();
+              if (!missingIngredients.has(ingName)) {
+                missingIngredients.set(ingName, {
+                  name: ing.name,
+                  amount: ing.amount,
+                  unit: ing.unit,
+                  recipes: [],
+                });
+              }
+              missingIngredients.get(ingName).recipes.push(recipe.name);
+            }
+          });
+        }
+      });
+
       setShoppingList(Array.from(missingIngredients.values()));
     } finally {
-      toggleInProgress.current.delete(ingredientId);
+      toggleInProgress.current.delete(key as number);
+    }
+  };
+
+  const handleAddCustomToFridge = async (customIngredientId: number) => {
+    const key = `custom-${customIngredientId}`;
+    if (toggleInProgress.current.has(key as unknown as number)) return;
+    toggleInProgress.current.add(key as unknown as number);
+    try {
+      await addCustomToFridge(customIngredientId);
+      const [fridge, collection, userRecipes] = await Promise.all([
+        getFridgeWithDetails(),
+        getCollectionWithDetails(),
+        getUserRecipes(),
+      ]);
+      setUserFridge(fridge);
+
+      const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
+      const missingIngredients = new Map();
+
+      collection.forEach((item) => {
+        if (item.recipe && item.includeInShoppingList !== false) {
+          item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
+            const matched = matchIngredient(ing.name, fridgeIngredients);
+            if (!matched) {
+              const ingName = ing.name.toLowerCase();
+              if (!missingIngredients.has(ingName)) {
+                missingIngredients.set(ingName, {
+                  name: ing.name,
+                  amount: ing.amount,
+                  unit: ing.unit,
+                  recipes: [],
+                });
+              }
+              missingIngredients.get(ingName).recipes.push(item.recipe.name);
+            }
+          });
+        }
+      });
+
+      userRecipes.forEach((recipe) => {
+        if (recipe.includeInShoppingList !== false) {
+          recipe.ingredients.forEach((ing) => {
+            const matched = matchIngredient(ing.name, fridgeIngredients);
+            if (!matched) {
+              const ingName = ing.name.toLowerCase();
+              if (!missingIngredients.has(ingName)) {
+                missingIngredients.set(ingName, {
+                  name: ing.name,
+                  amount: ing.amount,
+                  unit: ing.unit,
+                  recipes: [],
+                });
+              }
+              missingIngredients.get(ingName).recipes.push(recipe.name);
+            }
+          });
+        }
+      });
+
+      setShoppingList(Array.from(missingIngredients.values()));
+    } finally {
+      toggleInProgress.current.delete(key as unknown as number);
+    }
+  };
+
+  const handleAddNewCustomIngredient = async (name: string, unit: string) => {
+    try {
+      const newCustom = await findOrCreateCustomIngredient(name, unit);
+      await addCustomToFridge(newCustom.id);
+      const [fridge, custom, collection, userRecipes] = await Promise.all([
+        getFridgeWithDetails(),
+        getCustomIngredients(),
+        getCollectionWithDetails(),
+        getUserRecipes(),
+      ]);
+      setUserFridge(fridge);
+      setCustomIngredients(custom);
+
+      const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
+      const missingIngredients = new Map();
+
+      collection.forEach((item) => {
+        if (item.recipe && item.includeInShoppingList !== false) {
+          item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
+            const matched = matchIngredient(ing.name, fridgeIngredients);
+            if (!matched) {
+              const ingName = ing.name.toLowerCase();
+              if (!missingIngredients.has(ingName)) {
+                missingIngredients.set(ingName, {
+                  name: ing.name,
+                  amount: ing.amount,
+                  unit: ing.unit,
+                  recipes: [],
+                });
+              }
+              missingIngredients.get(ingName).recipes.push(item.recipe.name);
+            }
+          });
+        }
+      });
+
+      userRecipes.forEach((recipe) => {
+        if (recipe.includeInShoppingList !== false) {
+          recipe.ingredients.forEach((ing) => {
+            const matched = matchIngredient(ing.name, fridgeIngredients);
+            if (!matched) {
+              const ingName = ing.name.toLowerCase();
+              if (!missingIngredients.has(ingName)) {
+                missingIngredients.set(ingName, {
+                  name: ing.name,
+                  amount: ing.amount,
+                  unit: ing.unit,
+                  recipes: [],
+                });
+              }
+              missingIngredients.get(ingName).recipes.push(recipe.name);
+            }
+          });
+        }
+      });
+
+      setShoppingList(Array.from(missingIngredients.values()));
+    } catch (e) {
+      console.error('Failed to add custom ingredient:', e);
     }
   };
 
@@ -291,8 +469,6 @@ export default function Fridge() {
                 Search Results
               </Text>
               {filteredIngredients.slice(0, 15).map((ing) => {
-                const imageSource =
-                  ing.images && ing.images.length > 0 ? getIngredientImage(ing.images[0]) : null;
                 return (
                   <TouchableOpacity
                     key={ing.id}
@@ -316,13 +492,6 @@ export default function Fridge() {
                       opacity: isInFridge(ing.id) ? 0.5 : 1,
                     }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      {imageSource && (
-                        <Image
-                          source={imageSource}
-                          style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
-                          resizeMode="cover"
-                        />
-                      )}
                       <View>
                         <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
                           {ing.name}
@@ -376,13 +545,8 @@ export default function Fridge() {
               </View>
             ) : (
               shoppingList.map((item, idx) => {
-                const ingredient = allIngredients.find(
-                  (ing) => ing.name.toLowerCase() === item.name.toLowerCase()
-                );
-                const imageSource =
-                  ingredient && ingredient.images && ingredient.images.length > 0
-                    ? getIngredientImage(ingredient.images[0])
-                    : null;
+                const builtInIng = findBuiltInIngredient(item.name, allIngredients);
+                const customIng = findCustomIngredient(item.name, customIngredients);
                 return (
                   <View
                     key={idx}
@@ -396,13 +560,6 @@ export default function Fridge() {
                       alignItems: 'center',
                     }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      {imageSource && (
-                        <Image
-                          source={imageSource}
-                          style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
-                          resizeMode="cover"
-                        />
-                      )}
                       <View style={{ flex: 1 }}>
                         <Text
                           style={{
@@ -417,24 +574,30 @@ export default function Fridge() {
                         </Text>
                       </View>
                     </View>
-                    {ingredient && (
-                      <TouchableOpacity
-                        onPress={() => handleAddToFridge(ingredient.id)}
-                        accessible={true}
-                        accessibilityLabel={`Add ${item.name} to fridge`}
-                        accessibilityRole="button"
-                        style={{
-                          backgroundColor: '#007aff',
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          borderRadius: 6,
-                          marginLeft: 8,
-                        }}>
-                        <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>
-                          Add
-                        </Text>
-                      </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (builtInIng) {
+                          handleAddToFridge(builtInIng.id);
+                        } else if (customIng) {
+                          handleAddCustomToFridge(customIng.id);
+                        } else {
+                          handleAddNewCustomIngredient(item.name, item.unit);
+                        }
+                      }}
+                      accessible={true}
+                      accessibilityLabel={`Add ${item.name} to fridge`}
+                      accessibilityRole="button"
+                      style={{
+                        backgroundColor: '#007aff',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 6,
+                        marginLeft: 8,
+                      }}>
+                      <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>
+                        Add
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 );
               })
@@ -492,13 +655,9 @@ export default function Fridge() {
               </View>
             ) : (
               userFridge.map((item) => {
-                const imageSource =
-                  item.ingredient?.images && item.ingredient.images.length > 0
-                    ? getIngredientImage(item.ingredient.images[0])
-                    : null;
                 return (
                   <View
-                    key={item.ingredientId}
+                    key={`${item.isCustom ? 'custom' : 'builtin'}-${item.ingredientId}`}
                     style={{
                       backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
                       padding: 12,
@@ -509,24 +668,17 @@ export default function Fridge() {
                       alignItems: 'center',
                     }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      {imageSource && (
-                        <Image
-                          source={imageSource}
-                          style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
-                          resizeMode="cover"
-                        />
-                      )}
                       <View>
                         <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
                           {item.ingredient?.name || 'Unknown'}
                         </Text>
                         <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
-                          {item.ingredient?.category || ''}
+                          {item.isCustom ? 'Custom' : item.ingredient?.category || ''}
                         </Text>
                       </View>
                     </View>
                     <TouchableOpacity
-                      onPress={() => handleRemoveFromFridge(item.ingredientId)}
+                      onPress={() => handleRemoveFromFridge(item.ingredientId, item.isCustom)}
                       accessible={true}
                       accessibilityLabel={`Remove ${item.ingredient?.name || 'ingredient'} from fridge`}
                       accessibilityRole="button">

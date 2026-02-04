@@ -602,7 +602,6 @@ const recipeImages: { [key: string]: any } = {
   'zapiekanki.jpg': require('../assets/recipe-image/zapiekanki.jpg'),
   'zemiakov-placky.jpg': require('../assets/recipe-image/zemiakov-placky.jpg'),
   '15-minute-chicken-halloumi-burgers.jpg': require('../assets/recipe-image/15-minute-chicken-halloumi-burgers.jpg'),
-
 };
 
 export const getRecipeImage = (filename: string) => {

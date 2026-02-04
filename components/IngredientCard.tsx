@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types/ingredient';
-import { getIngredientImage } from '../lib/ingredientImages';
 
 type IngredientCardProps = {
   ingredient: Ingredient;
@@ -13,7 +12,6 @@ type IngredientCardProps = {
 const IngredientCard = React.memo(({ ingredient, isInFridge, onPress }: IngredientCardProps) => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const imageSource = ingredient.images && ingredient.images.length > 0 ? getIngredientImage(ingredient.images[0]) : null;
 
   return (
     <TouchableOpacity
@@ -30,13 +28,6 @@ const IngredientCard = React.memo(({ ingredient, isInFridge, onPress }: Ingredie
         opacity: isInFridge ? 0.5 : 1,
       }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-        {imageSource && (
-          <Image
-            source={imageSource}
-            style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
-            resizeMode="cover"
-          />
-        )}
         <View>
           <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
             {ingredient.name}

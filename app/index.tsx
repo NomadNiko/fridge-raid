@@ -170,7 +170,8 @@ export default function Home() {
                 paddingVertical: 8,
                 marginBottom: 8,
               }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '600' }}>
+              <Text
+                style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '600' }}>
                 Filters
               </Text>
               <Ionicons
@@ -216,7 +217,8 @@ export default function Home() {
                     }}>
                     <Text
                       style={{
-                        color: selectedCuisine === cuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                        color:
+                          selectedCuisine === cuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
                         fontSize: 14,
                       }}>
                       {cuisine}
@@ -260,7 +262,10 @@ export default function Home() {
               <TouchableOpacity
                 onPress={() => {
                   setCurrentPage((p) => Math.max(1, p - 1));
-                  setTimeout(() => flatListRef.current?.scrollToIndex({ index: 0, animated: true }), 100);
+                  setTimeout(
+                    () => flatListRef.current?.scrollToIndex({ index: 0, animated: true }),
+                    100
+                  );
                 }}
                 disabled={currentPage === 1}
                 style={{
@@ -284,7 +289,10 @@ export default function Home() {
               <TouchableOpacity
                 onPress={() => {
                   setCurrentPage((p) => Math.min(totalPages, p + 1));
-                  setTimeout(() => flatListRef.current?.scrollToIndex({ index: 0, animated: true }), 100);
+                  setTimeout(
+                    () => flatListRef.current?.scrollToIndex({ index: 0, animated: true }),
+                    100
+                  );
                 }}
                 disabled={currentPage === totalPages}
                 style={{
