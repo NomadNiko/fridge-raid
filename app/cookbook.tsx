@@ -23,6 +23,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import RecipeDetailModal from '../components/RecipeDetailModal';
 import RecipeScannerModal from '../components/RecipeScannerModal';
+import UrlImportModal from '../components/UrlImportModal';
 import { Recipe } from '../types';
 import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
@@ -35,6 +36,7 @@ export default function Cookbook() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [showUrlImport, setShowUrlImport] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
   // Form state
@@ -547,46 +549,69 @@ export default function Cookbook() {
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff' }}>
       <ScrollView contentContainerStyle={{ padding: 16 }}>
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: 16,
-          }}>
-          <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 22, fontWeight: '600' }}>
+        <View style={{ marginBottom: 16 }}>
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 22,
+              fontWeight: '600',
+              marginBottom: 12,
+            }}>
             My Cookbook ({recipes.length})
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => setShowUrlImport(true)}
+              accessible={true}
+              accessibilityLabel="Import recipe from URL"
+              accessibilityRole="button"
+              style={{
+                flex: 1,
+                backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                paddingVertical: 10,
+                borderRadius: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+              }}>
+              <Ionicons name="link" size={18} color={isDark ? '#ffffff' : '#000000'} />
+              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>URL</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setShowScanner(true)}
               accessible={true}
               accessibilityLabel="Scan a recipe with camera"
               accessibilityRole="button"
               style={{
+                flex: 1,
                 backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
-                paddingHorizontal: 12,
-                paddingVertical: 8,
+                paddingVertical: 10,
                 borderRadius: 8,
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 4,
+                justifyContent: 'center',
+                gap: 6,
               }}>
-              <Ionicons name="camera" size={20} color={isDark ? '#ffffff' : '#000000'} />
+              <Ionicons name="camera" size={18} color={isDark ? '#ffffff' : '#000000'} />
               <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>Scan</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setShowForm(true)}
+              accessible={true}
+              accessibilityLabel="Add recipe manually"
+              accessibilityRole="button"
               style={{
+                flex: 1,
                 backgroundColor: '#007aff',
-                paddingHorizontal: 16,
-                paddingVertical: 8,
+                paddingVertical: 10,
                 borderRadius: 8,
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 4,
+                justifyContent: 'center',
+                gap: 6,
               }}>
-              <Ionicons name="add" size={20} color="#ffffff" />
+              <Ionicons name="add" size={18} color="#ffffff" />
               <Text style={{ color: '#ffffff', fontWeight: '600' }}>Add</Text>
             </TouchableOpacity>
           </View>
@@ -785,6 +810,12 @@ export default function Cookbook() {
       <RecipeScannerModal
         visible={showScanner}
         onClose={() => setShowScanner(false)}
+        onRecipeScanned={handleRecipeScanned}
+      />
+
+      <UrlImportModal
+        visible={showUrlImport}
+        onClose={() => setShowUrlImport(false)}
         onRecipeScanned={handleRecipeScanned}
       />
     </View>

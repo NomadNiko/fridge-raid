@@ -146,38 +146,16 @@ export default function RecipeDetailModal({
             {recipe.description}
           </Text>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-            <View
-              style={{
-                backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 8,
-              }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
-                🍽️ {recipe.servings} servings
-              </Text>
-            </View>
-            <View
-              style={{
-                backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 8,
-              }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
-                ⏱️ {recipe.totalTime} min
-              </Text>
-            </View>
-            <View
-              style={{
-                backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 8,
-              }}>
-              <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>📊 {recipe.difficulty}</Text>
-            </View>
+          <View style={{ gap: 8, marginBottom: 20 }}>
+            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 15 }}>
+              🍽️ {recipe.servings} servings
+            </Text>
+            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 15 }}>
+              🥣 Prep: {recipe.prepTime} min
+            </Text>
+            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 15 }}>
+              🍳 Cook: {recipe.cookTime} min
+            </Text>
           </View>
 
           <Text

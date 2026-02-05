@@ -29,14 +29,19 @@ export const ingredientsData = [
     category: 'dairy',
     images: ['butter.jpg'],
     alternativeNames: [
-      'Unsalted Butter',
       'Sweet Butter',
-      'Salted Butter',
       'Stick Of Butter',
       'Butter Stick',
       'Room Temperature Butter',
       'Softened Butter',
       'Soft Butter',
+      'Salted or Unsalted Butter',
+      'Butter Melted',
+      'Liquid Butter',
+      'Warm Butter',
+      'Cold Butter',
+      'Refrigerated Butter',
+      'Butter Chilled',
     ],
   },
   {
@@ -44,7 +49,19 @@ export const ingredientsData = [
     name: 'Eggs',
     category: 'dairy',
     images: ['eggs.jpg'],
-    alternativeNames: ['Egg', 'Whole Eggs', 'Large Eggs', 'Chicken Eggs'],
+    alternativeNames: [
+      'Egg',
+      'Whole Eggs',
+      'Whole Egg',
+      'Chicken Eggs',
+      'Large Eggs',
+      'Large Egg',
+      'Medium Eggs',
+      'Medium Egg',
+      'Small Eggs',
+      'Small Egg',
+      'Chicken Egg',
+    ],
   },
   {
     id: 5,
@@ -246,15 +263,17 @@ export const ingredientsData = [
   },
   {
     id: 23,
-    name: 'Sugar',
+    name: 'Granulated Sugar',
     category: 'baking',
     images: ['sugar.jpg'],
     alternativeNames: [
       'White Sugar',
       'Granulated Sugar',
-      'Caster Sugar',
+      'Ground Sugar',
       'Table Sugar',
       'Refined Sugar',
+      'Coarse Sugar',
+      'Corse Sugar',
     ],
   },
   {
@@ -484,7 +503,7 @@ export const ingredientsData = [
     name: 'Water',
     category: 'beverages',
     images: ['water.jpg'],
-    alternativeNames: ['Cold Water', 'Tap Water', 'Drinking Water'],
+    alternativeNames: ['Cold Water', 'Tap Water', 'Drinking Water', 'Boiling Water'],
   },
   {
     id: 53,
@@ -650,7 +669,17 @@ export const ingredientsData = [
     name: 'Egg Yolks',
     category: 'dairy',
     images: [],
-    alternativeNames: ['Egg Yolk', 'Yolks', 'Yolk', 'Large Egg Yolks', 'Large Egg Yolk'],
+    alternativeNames: [
+      'Egg Yolk',
+      'Yolks',
+      'Yolk',
+      'Small Egg Yolk',
+      'Small Egg Yolks',
+      'Medium Egg Yolks',
+      'Medium Egg Yolk',
+      'Large Egg Yolks',
+      'Large Egg Yolk',
+    ],
   },
   {
     id: 82,
@@ -773,7 +802,7 @@ export const ingredientsData = [
   {
     id: 101,
     name: 'Bicarbonate Of Soda',
-    category: 'other',
+    category: 'baking',
     images: [],
     alternativeNames: ['Baking Soda', 'Bicarb', 'Sodium Bicarbonate', 'Bicarb Soda', 'Bread Soda'],
   },
@@ -794,7 +823,7 @@ export const ingredientsData = [
   {
     id: 105,
     name: 'Blackberries',
-    category: 'other',
+    category: 'fruit',
     images: [],
     alternativeNames: [],
   },
@@ -818,15 +847,8 @@ export const ingredientsData = [
     ],
   },
   {
-    id: 108,
-    name: 'Melted Butter',
-    category: 'dairy',
-    images: [],
-    alternativeNames: ['Butter Melted', 'Liquid Butter', 'Warm Butter'],
-  },
-  {
     id: 110,
-    name: 'Ground Sugar',
+    name: 'Caster Sugar',
     category: 'baking',
     images: [],
     alternativeNames: [],
@@ -834,7 +856,7 @@ export const ingredientsData = [
   {
     id: 111,
     name: 'Digestive Biscuits',
-    category: 'other',
+    category: 'sweets',
     images: [],
     alternativeNames: [],
   },
@@ -876,7 +898,7 @@ export const ingredientsData = [
   {
     id: 117,
     name: 'Mascarpone',
-    category: 'other',
+    category: 'dairy',
     images: [],
     alternativeNames: [],
   },
@@ -911,7 +933,7 @@ export const ingredientsData = [
   {
     id: 122,
     name: 'Apricot',
-    category: 'other',
+    category: 'fruit',
     images: [],
     alternativeNames: [],
   },
@@ -925,7 +947,7 @@ export const ingredientsData = [
   {
     id: 124,
     name: 'Mint',
-    category: 'other',
+    category: 'herbs',
     images: [],
     alternativeNames: [
       'Fresh Mint',
@@ -940,7 +962,7 @@ export const ingredientsData = [
   {
     id: 1240,
     name: 'Peppermint',
-    category: 'other',
+    category: 'herbs',
     images: [],
     alternativeNames: [
       'Fresh Peppermint',
@@ -955,7 +977,7 @@ export const ingredientsData = [
   {
     id: 12400,
     name: 'Spearmint',
-    category: 'other',
+    category: 'herbs',
     images: [],
     alternativeNames: [
       'Fresh Spearmint',
@@ -1004,7 +1026,7 @@ export const ingredientsData = [
   {
     id: 129,
     name: 'Shredded Meat',
-    category: 'other',
+    category: 'meat',
     images: [],
     alternativeNames: [],
   },
@@ -1068,7 +1090,7 @@ export const ingredientsData = [
   {
     id: 136,
     name: 'Black Pudding',
-    category: 'other',
+    category: 'meat',
     images: [],
     alternativeNames: [],
   },
@@ -1096,7 +1118,11 @@ export const ingredientsData = [
       'Chicken Bouillon',
       'Chicken Stock Cube',
       'Chicken Stock Pot',
+      'Chicken Bouillon Powder',
+      'Chicken Bouillon Cube',
       'Poultry Stock',
+      'Poultry Stock Powder',
+      'Poultry Stock Cube',
     ],
   },
   {
@@ -1116,7 +1142,7 @@ export const ingredientsData = [
   {
     id: 143,
     name: 'Saffron',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [],
   },
@@ -1136,14 +1162,14 @@ export const ingredientsData = [
   {
     id: 145,
     name: 'Seafood Stock',
-    category: 'other',
+    category: 'seafood',
     images: [],
     alternativeNames: [],
   },
   {
     id: 146,
     name: 'Squid',
-    category: 'other',
+    category: 'seafood',
     images: [],
     alternativeNames: [],
   },
@@ -1157,7 +1183,7 @@ export const ingredientsData = [
   {
     id: 148,
     name: 'Chorizo',
-    category: 'other',
+    category: 'meat',
     images: [],
     alternativeNames: [
       'Chorizo Sausage',
@@ -1233,7 +1259,7 @@ export const ingredientsData = [
   {
     id: 155,
     name: 'Couscous',
-    category: 'other',
+    category: 'grain',
     images: [],
     alternativeNames: [
       'Cous Cous',
@@ -1316,8 +1342,12 @@ export const ingredientsData = [
     alternativeNames: [
       'Egg Whites',
       'Whites Of Egg',
-      'Large Egg White',
+      'Small Egg White',
+      'Small Egg Whites',
+      'Medium Egg Whites',
+      'Medium Egg White',
       'Large Egg Whites',
+      'Large Egg White',
       'Beaten Egg White',
       'Beaten Egg Whites',
     ],
@@ -1378,6 +1408,13 @@ export const ingredientsData = [
       'Boneless Skinless Chicken Thighs',
       'Chicken Thigh Fillets',
     ],
+  },
+  {
+    id: 171,
+    name: 'Whole Chicken',
+    category: 'meat',
+    images: [],
+    alternativeNames: ['Entire Chicken', 'Whole Boned Chicken', 'Whole Chicken Quartered'],
   },
   {
     id: 172,
@@ -1459,7 +1496,7 @@ export const ingredientsData = [
   {
     id: 183,
     name: 'Red Chilli Powder',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [
       'Red Chili Powder',
@@ -1473,7 +1510,7 @@ export const ingredientsData = [
   {
     id: 185,
     name: 'Salmon',
-    category: 'other',
+    category: 'seafood',
     images: [],
     alternativeNames: [
       'Salmon Fillet',
@@ -1500,17 +1537,10 @@ export const ingredientsData = [
   },
   {
     id: 187,
-    name: 'Chilled Butter',
+    name: 'Unsalted Butter',
     category: 'dairy',
     images: [],
-    alternativeNames: ['Cold Butter', 'Refrigerated Butter', 'Butter Chilled'],
-  },
-  {
-    id: 188,
-    name: 'Cold Water',
-    category: 'other',
-    images: [],
-    alternativeNames: [],
+    alternativeNames: ['Butter Without Salt'],
   },
   {
     id: 189,
@@ -1985,12 +2015,18 @@ export const ingredientsData = [
     name: 'Rosemary',
     category: 'other',
     images: [],
+    alternativeNames: ['Fresh Rosemary', 'Rosemary Sprigs', 'Rosemary Leaves', 'Rosemary Needles'],
+  },
+  {
+    id: 2420,
+    name: 'Dried Rosemary',
+    category: 'other',
+    images: [],
     alternativeNames: [
-      'Fresh Rosemary',
-      'Rosemary Sprigs',
-      'Rosemary Leaves',
-      'Dried Rosemary',
-      'Rosemary Needles',
+      'Ground Rosemary',
+      'Dried Rosemary Sprigs',
+      'Dried Rosemary Leaves',
+      'Dried Rosemary Needles',
     ],
   },
   {
@@ -2097,15 +2133,28 @@ export const ingredientsData = [
     name: 'Noodles',
     category: 'grains',
     images: [],
-    alternativeNames: [
-      'Egg Noodles',
-      'Asian Noodles',
-      'Chinese Noodles',
-      'Lo Mein Noodles',
-      'Chow Mein Noodles',
-      'Ramen Noodles',
-      'Udon Noodles',
-    ],
+    alternativeNames: ['Ramen Noodles'],
+  },
+  {
+    id: 2580,
+    name: 'Chow Mein Noodles',
+    category: 'grains',
+    images: [],
+    alternativeNames: ['Asian Chow Mein Noodles', 'Chinese Chow Mein Noodles'],
+  },
+  {
+    id: 2581,
+    name: 'Lo Mein Noodles',
+    category: 'grains',
+    images: [],
+    alternativeNames: ['Asian Lo Mein Noodles', 'Chinese Lo Mein Noodles'],
+  },
+  {
+    id: 2582,
+    name: 'Udon Noodles',
+    category: 'grains',
+    images: [],
+    alternativeNames: ['Asian Udon Noodles', 'Chinese Udon Noodles'],
   },
   {
     id: 259,
@@ -2259,13 +2308,6 @@ export const ingredientsData = [
     id: 279,
     name: 'Blackcurrant Jam',
     category: 'other',
-    images: [],
-    alternativeNames: [],
-  },
-  {
-    id: 280,
-    name: 'Chicken Stock Cube',
-    category: 'meat',
     images: [],
     alternativeNames: [],
   },
@@ -2494,7 +2536,7 @@ export const ingredientsData = [
     name: 'Dark Brown Sugar',
     category: 'baking',
     images: [],
-    alternativeNames: [],
+    alternativeNames: ['Dark Brown Soft Sugar'],
   },
   {
     id: 314,
@@ -3098,20 +3140,6 @@ export const ingredientsData = [
     alternativeNames: [],
   },
   {
-    id: 409,
-    name: 'Chicken Bouillon Powder',
-    category: 'meat',
-    images: [],
-    alternativeNames: [],
-  },
-  {
-    id: 410,
-    name: 'Dark Brown Soft Sugar',
-    category: 'baking',
-    images: [],
-    alternativeNames: [],
-  },
-  {
     id: 411,
     name: 'Red Wine Jelly',
     category: 'other',
@@ -3128,13 +3156,6 @@ export const ingredientsData = [
   {
     id: 413,
     name: 'Bread Flour',
-    category: 'baking',
-    images: [],
-    alternativeNames: [],
-  },
-  {
-    id: 414,
-    name: 'Light Brown Soft Sugar',
     category: 'baking',
     images: [],
     alternativeNames: [],
@@ -3286,9 +3307,9 @@ export const ingredientsData = [
   },
   {
     id: 440,
-    name: 'Dark Soft Brown Sugar',
+    name: 'Light Brown Sugar',
     category: 'baking',
-    images: [],
+    images: ['Light Brown Soft Sugar'],
     alternativeNames: [],
   },
   {
@@ -4209,13 +4230,6 @@ export const ingredientsData = [
     alternativeNames: [],
   },
   {
-    id: 592,
-    name: 'Boiling Water',
-    category: 'oils',
-    images: [],
-    alternativeNames: [],
-  },
-  {
     id: 594,
     name: 'Water Chestnut',
     category: 'other',
@@ -4561,7 +4575,7 @@ export const ingredientsData = [
     name: 'Rice Stick Noodles',
     category: 'grains',
     images: [],
-    alternativeNames: [],
+    alternativeNames: ['Rice Sticky Noodles'],
   },
   {
     id: 654,
@@ -5744,7 +5758,7 @@ export const ingredientsData = [
     name: 'Egg Rolls',
     category: 'dairy',
     images: [],
-    alternativeNames: [],
+    alternativeNames: ['Chinese Egg Rolls', 'Asian Egg Rolls'],
   },
   {
     id: 835,
