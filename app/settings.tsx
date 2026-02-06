@@ -1,10 +1,10 @@
-import { View, Text, ScrollView, Pressable, Linking, useColorScheme, Alert } from 'react-native';
+import { View, Text, ScrollView, Pressable, Linking, useColorScheme, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { APP_CONFIG } from '../config/app';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { getUserFridge, getUserCollection, getUserRecipes, getCustomIngredients } from '../lib/storage';
+import { getUserFridge, getUserCollection, getUserRecipes, getCustomIngredients, CustomIngredient } from '../lib/storage';
 
 export default function Settings() {
   const colorScheme = useColorScheme();
@@ -13,11 +13,13 @@ export default function Settings() {
   const [collectionCount, setCollectionCount] = useState(0);
   const [customRecipesCount, setCustomRecipesCount] = useState(0);
   const [customIngredientsCount, setCustomIngredientsCount] = useState(0);
+  const [customIngredients, setCustomIngredients] = useState<CustomIngredient[]>([]);
+  const [showIngredientsModal, setShowIngredientsModal] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       const loadCounts = async () => {
-        const [fridge, collection, userRecipes, customIngredients] = await Promise.all([
+        const [fridge, collection, userRecipes, customIngs] = await Promise.all([
           getUserFridge(),
           getUserCollection(),
           getUserRecipes(),
@@ -26,7 +28,8 @@ export default function Settings() {
         setFridgeCount(fridge.length);
         setCollectionCount(collection.length);
         setCustomRecipesCount(userRecipes.length);
-        setCustomIngredientsCount(customIngredients.length);
+        setCustomIngredientsCount(customIngs.length);
+        setCustomIngredients(customIngs);
       };
       loadCounts();
     }, [])
@@ -117,13 +120,20 @@ export default function Settings() {
               {customRecipesCount}
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
               Custom Ingredients:
             </Text>
-            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14 }}>
-              {customIngredientsCount}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14 }}>
+                {customIngredientsCount}
+              </Text>
+              {customIngredientsCount > 0 && (
+                <Pressable onPress={() => setShowIngredientsModal(true)}>
+                  <Ionicons name="list-outline" size={20} color="#007aff" />
+                </Pressable>
+              )}
+            </View>
           </View>
         </View>
 
@@ -287,6 +297,50 @@ export default function Settings() {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showIngredientsModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowIngredientsModal(false)}>
+        <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff' }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: isDark ? '#1c1c1e' : '#e5e5ea',
+            }}>
+            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 18, fontWeight: '600' }}>
+              Custom Ingredients ({customIngredients.length})
+            </Text>
+            <Pressable onPress={() => setShowIngredientsModal(false)}>
+              <Ionicons name="close" size={28} color={isDark ? '#ffffff' : '#000000'} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16 }}>
+            {customIngredients.map((ing) => (
+              <View
+                key={ing.id}
+                style={{
+                  backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 8,
+                }}>
+                <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '500' }}>
+                  {ing.name}
+                </Text>
+                <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginTop: 4 }}>
+                  {ing.category} • {ing.quantity} {ing.unit}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }

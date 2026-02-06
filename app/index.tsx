@@ -6,7 +6,6 @@ import {
   useColorScheme,
   ActivityIndicator,
   TouchableOpacity,
-  ScrollView,
 } from 'react-native';
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';

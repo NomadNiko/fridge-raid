@@ -31,11 +31,27 @@ interface Props {
     cuisine: string;
     category: string;
   }) => void;
+  onRecipeAdded?: (recipe: {
+    name: string;
+    description: string;
+    ingredients: { name: string; amount: string; unit: string }[];
+    instructions: string[];
+    prepTime: string;
+    cookTime: string;
+    servings: string;
+    cuisine: string;
+    category: string;
+  }) => void;
 }
 
 type ImportStatus = 'url-input' | 'fetching' | 'parsing' | 'preview' | 'error';
 
-export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Props) {
+export default function UrlImportModal({
+  visible,
+  onClose,
+  onRecipeScanned,
+  onRecipeAdded,
+}: Props) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -122,9 +138,29 @@ export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Pr
     setParsedRecipe(null);
   };
 
-  const handleUseRecipe = () => {
+  const handleEditRecipe = () => {
     if (parsedRecipe) {
       onRecipeScanned({
+        name: parsedRecipe.name,
+        description: parsedRecipe.description,
+        ingredients:
+          parsedRecipe.ingredients.length > 0
+            ? parsedRecipe.ingredients
+            : [{ name: '', amount: '', unit: '' }],
+        instructions: parsedRecipe.instructions.length > 0 ? parsedRecipe.instructions : [''],
+        prepTime: parsedRecipe.prepTime,
+        cookTime: parsedRecipe.cookTime,
+        servings: parsedRecipe.servings,
+        cuisine: parsedRecipe.cuisine,
+        category: parsedRecipe.category,
+      });
+      handleClose();
+    }
+  };
+
+  const handleAddRecipe = () => {
+    if (parsedRecipe && onRecipeAdded) {
+      onRecipeAdded({
         name: parsedRecipe.name,
         description: parsedRecipe.description,
         ingredients:
@@ -151,14 +187,15 @@ export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Pr
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={100}>
             <View style={styles.centeredContent}>
-              <View style={[styles.iconContainer, { backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7' }]}>
+              <View
+                style={[styles.iconContainer, { backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7' }]}>
                 <Ionicons name="link" size={48} color="#007aff" />
               </View>
               <Text style={[styles.title, { color: isDark ? '#fff' : '#000' }]}>
                 Import from URL
               </Text>
               <Text style={[styles.subtitle, { color: isDark ? '#8e8e93' : '#636366' }]}>
-                Paste a link to a recipe page and we'll extract the recipe for you
+                {"Paste a link to a recipe page and we'll extract the recipe for you"}
               </Text>
 
               <View style={styles.inputContainer}>
@@ -183,18 +220,18 @@ export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Pr
                 />
               </View>
 
-              {error && status === 'url-input' && (
-                <Text style={styles.inlineError}>{error}</Text>
-              )}
+              {error && status === 'url-input' && <Text style={styles.inlineError}>{error}</Text>}
 
               <TouchableOpacity
                 onPress={handleImport}
                 disabled={!url.trim()}
-                style={[
-                  styles.primaryButton,
-                  !url.trim() && styles.primaryButtonDisabled,
-                ]}>
-                <Ionicons name="download-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+                style={[styles.primaryButton, !url.trim() && styles.primaryButtonDisabled]}>
+                <Ionicons
+                  name="download-outline"
+                  size={20}
+                  color="#fff"
+                  style={{ marginRight: 8 }}
+                />
                 <Text style={styles.primaryButtonText}>Import Recipe</Text>
               </TouchableOpacity>
 
@@ -224,7 +261,9 @@ export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Pr
             <Text style={[styles.statusText, { color: isDark ? '#fff' : '#000' }]}>
               {status === 'fetching' ? 'Loading page...' : 'Extracting recipe...'}
             </Text>
-            <Text style={[styles.urlPreview, { color: isDark ? '#8e8e93' : '#636366' }]} numberOfLines={1}>
+            <Text
+              style={[styles.urlPreview, { color: isDark ? '#8e8e93' : '#636366' }]}
+              numberOfLines={1}>
               {url}
             </Text>
           </View>
@@ -279,8 +318,17 @@ export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Pr
                         styles.metadataChip,
                         { backgroundColor: isDark ? '#2c2c2e' : '#f2f2f7' },
                       ]}>
-                      <Ionicons name="time-outline" size={14} color={isDark ? '#8e8e93' : '#636366'} />
-                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 12, marginLeft: 4 }}>
+                      <Ionicons
+                        name="time-outline"
+                        size={14}
+                        color={isDark ? '#8e8e93' : '#636366'}
+                      />
+                      <Text
+                        style={{
+                          color: isDark ? '#8e8e93' : '#636366',
+                          fontSize: 12,
+                          marginLeft: 4,
+                        }}>
                         Prep: {parsedRecipe.prepTime} min
                       </Text>
                     </View>
@@ -291,8 +339,17 @@ export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Pr
                         styles.metadataChip,
                         { backgroundColor: isDark ? '#2c2c2e' : '#f2f2f7' },
                       ]}>
-                      <Ionicons name="flame-outline" size={14} color={isDark ? '#8e8e93' : '#636366'} />
-                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 12, marginLeft: 4 }}>
+                      <Ionicons
+                        name="flame-outline"
+                        size={14}
+                        color={isDark ? '#8e8e93' : '#636366'}
+                      />
+                      <Text
+                        style={{
+                          color: isDark ? '#8e8e93' : '#636366',
+                          fontSize: 12,
+                          marginLeft: 4,
+                        }}>
                         Cook: {parsedRecipe.cookTime} min
                       </Text>
                     </View>
@@ -303,8 +360,17 @@ export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Pr
                         styles.metadataChip,
                         { backgroundColor: isDark ? '#2c2c2e' : '#f2f2f7' },
                       ]}>
-                      <Ionicons name="people-outline" size={14} color={isDark ? '#8e8e93' : '#636366'} />
-                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 12, marginLeft: 4 }}>
+                      <Ionicons
+                        name="people-outline"
+                        size={14}
+                        color={isDark ? '#8e8e93' : '#636366'}
+                      />
+                      <Text
+                        style={{
+                          color: isDark ? '#8e8e93' : '#636366',
+                          fontSize: 12,
+                          marginLeft: 4,
+                        }}>
                         Serves: {parsedRecipe.servings}
                       </Text>
                     </View>
@@ -401,7 +467,11 @@ export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Pr
                 )}
               </View>
 
-              <View style={[styles.sourceContainer, { backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7' }]}>
+              <View
+                style={[
+                  styles.sourceContainer,
+                  { backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7' },
+                ]}>
                 <Ionicons name="link-outline" size={14} color={isDark ? '#8e8e93' : '#636366'} />
                 <Text
                   style={[styles.sourceText, { color: isDark ? '#8e8e93' : '#636366' }]}
@@ -414,15 +484,23 @@ export default function UrlImportModal({ visible, onClose, onRecipeScanned }: Pr
             <View style={[styles.actionBar, { borderTopColor: isDark ? '#2c2c2e' : '#e5e5ea' }]}>
               <TouchableOpacity
                 onPress={handleRetry}
-                style={[styles.actionButton, { backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea' }]}>
+                style={[
+                  styles.actionButtonSmall,
+                  { backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea' },
+                ]}>
                 <Text style={[styles.actionButtonText, { color: isDark ? '#fff' : '#000' }]}>
                   Try Different URL
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={handleUseRecipe}
+                onPress={handleAddRecipe}
+                style={[styles.actionButton, { backgroundColor: '#34c759' }]}>
+                <Text style={[styles.actionButtonText, { color: '#fff' }]}>Add Recipe</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleEditRecipe}
                 style={[styles.actionButton, { backgroundColor: '#007aff' }]}>
-                <Text style={[styles.actionButtonText, { color: '#fff' }]}>Use Recipe</Text>
+                <Text style={[styles.actionButtonText, { color: '#fff' }]}>Edit Recipe</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -638,6 +716,12 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionButtonSmall: {
+    paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',

@@ -100,7 +100,9 @@ function RecipeCard({
                     fontSize: 13,
                     fontStyle: hasIng ? 'normal' : 'italic',
                   }}>
-                  {ing.amount ? `${ing.amount} ` : ''}{ing.unit ? `${ing.unit} ` : ''}{ing.name}
+                  {ing.amount ? `${ing.amount} ` : ''}
+                  {ing.unit ? `${ing.unit} ` : ''}
+                  {ing.name}
                 </Text>
               </View>
             );

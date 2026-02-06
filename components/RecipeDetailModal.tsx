@@ -195,7 +195,9 @@ export default function RecipeDetailModal({
                       flex: 1,
                       fontStyle: hasIng ? 'normal' : 'italic',
                     }}>
-                    {ing.amount ? `${ing.amount} ` : ''}{ing.unit ? `${ing.unit} ` : ''}{ing.name}
+                    {ing.amount ? `${ing.amount} ` : ''}
+                    {ing.unit ? `${ing.unit} ` : ''}
+                    {ing.name}
                     {ing.preparation && `, ${ing.preparation}`}
                     {ing.optional && ' (optional)'}
                   </Text>

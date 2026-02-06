@@ -8,7 +8,9 @@
       "Bash(npx tsc:*)",
       "Bash(npm run lint)",
       "Bash(npm run format:*)",
-      "Bash(node scripts/find-long-steps.js:*)"
+      "Bash(node scripts/find-long-steps.js:*)",
+      "Bash(node scripts/find-single-step.js:*)",
+      "Bash(node:*)"
     ]
   }
 }

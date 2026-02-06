@@ -28,6 +28,58 @@ import { Recipe } from '../types';
 import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
 
+// Parse fraction strings (like "½", "1/2", "1 ½") to decimal numbers
+const parseFractionAmount = (amount: string): number => {
+  if (!amount || !amount.trim()) return 0;
+
+  const str = amount.trim();
+
+  // Unicode fraction map
+  const unicodeFractions: Record<string, number> = {
+    '½': 0.5, '⅓': 1/3, '⅔': 2/3, '¼': 0.25, '¾': 0.75,
+    '⅕': 0.2, '⅖': 0.4, '⅗': 0.6, '⅘': 0.8,
+    '⅙': 1/6, '⅚': 5/6, '⅐': 1/7, '⅛': 0.125, '⅜': 0.375,
+    '⅝': 0.625, '⅞': 0.875, '⅑': 1/9, '⅒': 0.1,
+  };
+
+  // Check for standalone unicode fraction
+  if (unicodeFractions[str] !== undefined) {
+    return unicodeFractions[str];
+  }
+
+  // Check for mixed number with unicode fraction (e.g., "1 ½" or "1½")
+  for (const [frac, val] of Object.entries(unicodeFractions)) {
+    if (str.includes(frac)) {
+      const wholePart = str.replace(frac, '').trim();
+      const wholeNum = wholePart ? parseFloat(wholePart) : 0;
+      if (!isNaN(wholeNum)) {
+        return wholeNum + val;
+      }
+    }
+  }
+
+  // Check for slash fraction (e.g., "1/2", "3/4")
+  const slashMatch = str.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (slashMatch) {
+    const num = parseFloat(slashMatch[1]);
+    const denom = parseFloat(slashMatch[2]);
+    if (denom !== 0) return num / denom;
+  }
+
+  // Check for mixed number with slash fraction (e.g., "1 1/2")
+  const mixedMatch = str.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (mixedMatch) {
+    const whole = parseFloat(mixedMatch[1]);
+    const num = parseFloat(mixedMatch[2]);
+    const denom = parseFloat(mixedMatch[3]);
+    if (denom !== 0) return whole + (num / denom);
+  }
+
+  // Fall back to parseFloat for regular numbers
+  const parsed = parseFloat(str);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 export default function Cookbook() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -103,7 +155,7 @@ export default function Cookbook() {
       description: description.trim() || undefined,
       ingredients: validIngredients.map((i) => ({
         name: i.name.trim(),
-        amount: parseFloat(i.amount) || 0,
+        amount: parseFractionAmount(i.amount),
         unit: i.unit.trim(),
       })),
       instructions: validInstructions.map((text, idx) => ({
@@ -202,6 +254,47 @@ export default function Cookbook() {
     setCategory(scannedRecipe.category);
     // Show the form with pre-filled data
     setShowForm(true);
+  };
+
+  const handleRecipeAdded = async (scannedRecipe: {
+    name: string;
+    description: string;
+    ingredients: { name: string; amount: string; unit: string }[];
+    instructions: string[];
+    prepTime: string;
+    cookTime: string;
+    servings: string;
+    cuisine: string;
+    category: string;
+  }) => {
+    const validIngredients = scannedRecipe.ingredients.filter((i) => i.name.trim());
+    const validInstructions = scannedRecipe.instructions.filter((i) => i.trim());
+
+    if (!scannedRecipe.name.trim() || validIngredients.length === 0 || validInstructions.length === 0) {
+      Alert.alert('Error', 'Recipe must have a name, at least one ingredient, and at least one instruction');
+      return;
+    }
+
+    await addUserRecipe({
+      name: scannedRecipe.name.trim(),
+      description: scannedRecipe.description.trim() || undefined,
+      ingredients: validIngredients.map((i) => ({
+        name: i.name.trim(),
+        amount: parseFractionAmount(i.amount),
+        unit: i.unit.trim(),
+      })),
+      instructions: validInstructions.map((text, idx) => ({
+        step: idx + 1,
+        text: text.trim(),
+      })),
+      prepTime: scannedRecipe.prepTime ? parseInt(scannedRecipe.prepTime) : undefined,
+      cookTime: scannedRecipe.cookTime ? parseInt(scannedRecipe.cookTime) : undefined,
+      servings: scannedRecipe.servings ? parseInt(scannedRecipe.servings) : undefined,
+      cuisine: scannedRecipe.cuisine.trim() || undefined,
+      category: scannedRecipe.category.trim() || undefined,
+    });
+
+    loadRecipes();
   };
 
   if (loading) {
@@ -811,12 +904,14 @@ export default function Cookbook() {
         visible={showScanner}
         onClose={() => setShowScanner(false)}
         onRecipeScanned={handleRecipeScanned}
+        onRecipeAdded={handleRecipeAdded}
       />
 
       <UrlImportModal
         visible={showUrlImport}
         onClose={() => setShowUrlImport(false)}
         onRecipeScanned={handleRecipeScanned}
+        onRecipeAdded={handleRecipeAdded}
       />
     </View>
   );

@@ -31,11 +31,27 @@ interface Props {
     cuisine: string;
     category: string;
   }) => void;
+  onRecipeAdded?: (recipe: {
+    name: string;
+    description: string;
+    ingredients: { name: string; amount: string; unit: string }[];
+    instructions: string[];
+    prepTime: string;
+    cookTime: string;
+    servings: string;
+    cuisine: string;
+    category: string;
+  }) => void;
 }
 
 type ScanStatus = 'page-select' | 'camera' | 'processing' | 'parsing' | 'preview' | 'error';
 
-export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }: Props) {
+export default function RecipeScannerModal({
+  visible,
+  onClose,
+  onRecipeScanned,
+  onRecipeAdded,
+}: Props) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -249,9 +265,29 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
     resetState();
   };
 
-  const handleUseRecipe = () => {
+  const handleEditRecipe = () => {
     if (parsedRecipe) {
       onRecipeScanned({
+        name: parsedRecipe.name,
+        description: parsedRecipe.description,
+        ingredients:
+          parsedRecipe.ingredients.length > 0
+            ? parsedRecipe.ingredients
+            : [{ name: '', amount: '', unit: '' }],
+        instructions: parsedRecipe.instructions.length > 0 ? parsedRecipe.instructions : [''],
+        prepTime: parsedRecipe.prepTime,
+        cookTime: parsedRecipe.cookTime,
+        servings: parsedRecipe.servings,
+        cuisine: parsedRecipe.cuisine,
+        category: parsedRecipe.category,
+      });
+      handleClose();
+    }
+  };
+
+  const handleAddRecipe = () => {
+    if (parsedRecipe && onRecipeAdded) {
+      onRecipeAdded({
         name: parsedRecipe.name,
         description: parsedRecipe.description,
         ingredients:
@@ -373,15 +409,15 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
                   {Array.from({ length: totalPages }, (_, i) => (
                     <View key={i}>
                       {capturedImages[i] ? (
-                        <Image
-                          source={{ uri: capturedImages[i] }}
-                          style={styles.pageThumbnail}
-                        />
+                        <Image source={{ uri: capturedImages[i] }} style={styles.pageThumbnail} />
                       ) : (
                         <View
                           style={[
                             styles.pageThumbnailPlaceholder,
-                            i === currentPage - 1 && { borderColor: '#007aff', borderStyle: 'solid' },
+                            i === currentPage - 1 && {
+                              borderColor: '#007aff',
+                              borderStyle: 'solid',
+                            },
                           ]}
                         />
                       )}
@@ -609,15 +645,23 @@ export default function RecipeScannerModal({ visible, onClose, onRecipeScanned }
             <View style={[styles.actionBar, { borderTopColor: isDark ? '#2c2c2e' : '#e5e5ea' }]}>
               <TouchableOpacity
                 onPress={handleRetry}
-                style={[styles.actionButton, { backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea' }]}>
+                style={[
+                  styles.actionButtonSmall,
+                  { backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea' },
+                ]}>
                 <Text style={[styles.actionButtonText, { color: isDark ? '#fff' : '#000' }]}>
                   Scan Again
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={handleUseRecipe}
+                onPress={handleAddRecipe}
+                style={[styles.actionButton, { backgroundColor: '#34c759' }]}>
+                <Text style={[styles.actionButtonText, { color: '#fff' }]}>Add Recipe</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleEditRecipe}
                 style={[styles.actionButton, { backgroundColor: '#007aff' }]}>
-                <Text style={[styles.actionButtonText, { color: '#fff' }]}>Use Recipe</Text>
+                <Text style={[styles.actionButtonText, { color: '#fff' }]}>Edit Recipe</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -921,6 +965,12 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  actionButtonSmall: {
+    paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
