@@ -142,9 +142,35 @@ export default function RecipeDetailModal({
             }}>
             {recipe.name}
           </Text>
-          <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 16, marginBottom: 16 }}>
+          <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 16, marginBottom: 12 }}>
             {recipe.description}
           </Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+            <View
+              style={{
+                backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}>
+              <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 13 }}>
+                {recipe.cuisine}
+              </Text>
+            </View>
+            {recipe.mealType && (
+              <View
+                style={{
+                  backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                }}>
+                <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 13 }}>
+                  {recipe.mealType}
+                </Text>
+              </View>
+            )}
+          </View>
 
           <View style={{ gap: 8, marginBottom: 20 }}>
             <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 15 }}>
@@ -196,7 +222,7 @@ export default function RecipeDetailModal({
                       fontStyle: hasIng ? 'normal' : 'italic',
                     }}>
                     {ing.amount ? `${ing.amount} ` : ''}
-                    {ing.unit ? `${ing.unit} ` : ''}
+                    {ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}
                     {ing.name}
                     {ing.preparation && `, ${ing.preparation}`}
                     {ing.optional && ' (optional)'}

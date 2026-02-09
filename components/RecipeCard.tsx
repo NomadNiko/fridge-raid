@@ -67,7 +67,9 @@ function RecipeCard({
             {recipe.name}
           </Text>
           <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
-            {recipe.cuisine} • {recipe.difficulty} • {recipe.totalTime} min
+            {recipe.cuisine}
+            {recipe.mealType ? ` • ${recipe.mealType}` : ''} • {recipe.difficulty} •{' '}
+            {recipe.totalTime} min
           </Text>
         </View>
       </View>
@@ -101,8 +103,9 @@ function RecipeCard({
                     fontStyle: hasIng ? 'normal' : 'italic',
                   }}>
                   {ing.amount ? `${ing.amount} ` : ''}
-                  {ing.unit ? `${ing.unit} ` : ''}
+                  {ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}
                   {ing.name}
+                  {ing.preparation && `, ${ing.preparation}`}
                 </Text>
               </View>
             );

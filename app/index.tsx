@@ -32,6 +32,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
+  const [selectedMealType, setSelectedMealType] = useState<string | null>(null);
   const [filtersVisible, setFiltersVisible] = useState(false);
   const toggleInProgress = useRef<Set<number>>(new Set());
   const flatListRef = useRef<FlatList>(null);
@@ -50,28 +51,37 @@ export default function Home() {
     }, [loadData])
   );
 
-  const filteredRecipes = useMemo(
-    () =>
-      search.trim()
-        ? recipes.filter((recipe) => {
-            const query = search.toLowerCase();
-            return (
-              recipe.name.toLowerCase().includes(query) ||
-              recipe.cuisine.toLowerCase().includes(query) ||
-              recipe.tags.some((tag: string) => tag.toLowerCase().includes(query)) ||
-              recipe.ingredients.some((ing: { name: string }) =>
-                ing.name.toLowerCase().includes(query)
-              )
-            );
-          })
-        : selectedCuisine
-          ? recipes.filter((recipe) => recipe.cuisine === selectedCuisine)
-          : recipes,
-    [search, recipes, selectedCuisine]
-  );
+  const filteredRecipes = useMemo(() => {
+    if (search.trim()) {
+      const query = search.toLowerCase();
+      return recipes.filter(
+        (recipe) =>
+          recipe.name.toLowerCase().includes(query) ||
+          recipe.cuisine.toLowerCase().includes(query) ||
+          (recipe.mealType && recipe.mealType.toLowerCase().includes(query)) ||
+          recipe.tags.some((tag: string) => tag.toLowerCase().includes(query)) ||
+          recipe.ingredients.some((ing: { name: string }) =>
+            ing.name.toLowerCase().includes(query)
+          )
+      );
+    }
+    let result = recipes;
+    if (selectedCuisine) {
+      result = result.filter((recipe) => recipe.cuisine === selectedCuisine);
+    }
+    if (selectedMealType) {
+      result = result.filter((recipe) => recipe.mealType === selectedMealType);
+    }
+    return result;
+  }, [search, recipes, selectedCuisine, selectedMealType]);
 
   const cuisines = useMemo(
     () => Array.from(new Set(recipes.map((r) => r.cuisine))).sort(),
+    [recipes]
+  );
+
+  const mealTypes = useMemo(
+    () => Array.from(new Set(recipes.map((r) => r.mealType).filter(Boolean))).sort() as string[],
     [recipes]
   );
 
@@ -198,50 +208,140 @@ export default function Home() {
               />
             </TouchableOpacity>
             {filtersVisible && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedCuisine(null);
-                    setCurrentPage(1);
-                  }}
+              <View style={{ marginBottom: 12 }}>
+                <Text
                   style={{
-                    backgroundColor: !selectedCuisine ? '#007aff' : isDark ? '#1c1c1e' : '#f2f2f7',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 16,
+                    color: isDark ? '#8e8e93' : '#636366',
+                    fontSize: 13,
+                    fontWeight: '600',
+                    marginBottom: 6,
                   }}>
-                  <Text
-                    style={{
-                      color: !selectedCuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
-                      fontSize: 14,
-                    }}>
-                    All
-                  </Text>
-                </TouchableOpacity>
-                {cuisines.map((cuisine) => (
+                  Cuisine
+                </Text>
+                <View
+                  style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                   <TouchableOpacity
-                    key={cuisine}
                     onPress={() => {
-                      setSelectedCuisine(cuisine);
+                      setSelectedCuisine(null);
                       setCurrentPage(1);
                     }}
                     style={{
-                      backgroundColor:
-                        selectedCuisine === cuisine ? '#007aff' : isDark ? '#1c1c1e' : '#f2f2f7',
+                      backgroundColor: !selectedCuisine
+                        ? '#007aff'
+                        : isDark
+                          ? '#1c1c1e'
+                          : '#f2f2f7',
                       paddingHorizontal: 12,
                       paddingVertical: 6,
                       borderRadius: 16,
                     }}>
                     <Text
                       style={{
-                        color:
-                          selectedCuisine === cuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                        color: !selectedCuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
                         fontSize: 14,
                       }}>
-                      {cuisine}
+                      All
                     </Text>
                   </TouchableOpacity>
-                ))}
+                  {cuisines.map((cuisine) => (
+                    <TouchableOpacity
+                      key={cuisine}
+                      onPress={() => {
+                        setSelectedCuisine(cuisine);
+                        setCurrentPage(1);
+                      }}
+                      style={{
+                        backgroundColor:
+                          selectedCuisine === cuisine
+                            ? '#007aff'
+                            : isDark
+                              ? '#1c1c1e'
+                              : '#f2f2f7',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                      }}>
+                      <Text
+                        style={{
+                          color:
+                            selectedCuisine === cuisine
+                              ? '#ffffff'
+                              : isDark
+                                ? '#ffffff'
+                                : '#000000',
+                          fontSize: 14,
+                        }}>
+                        {cuisine}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text
+                  style={{
+                    color: isDark ? '#8e8e93' : '#636366',
+                    fontSize: 13,
+                    fontWeight: '600',
+                    marginBottom: 6,
+                  }}>
+                  Meal Type
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedMealType(null);
+                      setCurrentPage(1);
+                    }}
+                    style={{
+                      backgroundColor: !selectedMealType
+                        ? '#007aff'
+                        : isDark
+                          ? '#1c1c1e'
+                          : '#f2f2f7',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 16,
+                    }}>
+                    <Text
+                      style={{
+                        color: !selectedMealType ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                        fontSize: 14,
+                      }}>
+                      All
+                    </Text>
+                  </TouchableOpacity>
+                  {mealTypes.map((mealType) => (
+                    <TouchableOpacity
+                      key={mealType}
+                      onPress={() => {
+                        setSelectedMealType(mealType);
+                        setCurrentPage(1);
+                      }}
+                      style={{
+                        backgroundColor:
+                          selectedMealType === mealType
+                            ? '#007aff'
+                            : isDark
+                              ? '#1c1c1e'
+                              : '#f2f2f7',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                      }}>
+                      <Text
+                        style={{
+                          color:
+                            selectedMealType === mealType
+                              ? '#ffffff'
+                              : isDark
+                                ? '#ffffff'
+                                : '#000000',
+                          fontSize: 14,
+                        }}>
+                        {mealType}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             )}
             {!search.trim() && recipes.length > 0 && (
@@ -252,8 +352,14 @@ export default function Home() {
                   marginBottom: 12,
                   fontWeight: '600',
                 }}>
-                {selectedCuisine ? `${selectedCuisine} Recipes` : 'All Recipes'} (
-                {filteredRecipes.length})
+                {selectedCuisine && selectedMealType
+                  ? `${selectedCuisine} ${selectedMealType} Recipes`
+                  : selectedCuisine
+                    ? `${selectedCuisine} Recipes`
+                    : selectedMealType
+                      ? `${selectedMealType} Recipes`
+                      : 'All Recipes'}{' '}
+                ({filteredRecipes.length})
               </Text>
             )}
           </>

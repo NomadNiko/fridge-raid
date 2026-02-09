@@ -13,13 +13,14 @@ const AWS_REGION = Constants.expoConfig?.extra?.awsRegion || 'us-east-1';
 export interface FormattedRecipe {
   name: string;
   description: string;
-  ingredients: { name: string; amount: string; unit: string }[];
+  ingredients: { name: string; amount: string; unit: string; preparation?: string }[];
   instructions: string[];
   prepTime: string;
   cookTime: string;
   servings: string;
   cuisine: string;
   category: string;
+  mealType: string;
   difficulty: string;
   tags: string[];
   dietaryInfo: {
@@ -37,48 +38,66 @@ export interface FormatResult {
 }
 
 // The prompt template for recipe extraction
-const RECIPE_EXTRACTION_PROMPT = `You are a recipe parser. Extract structured recipe data from the following OCR text.
+const RECIPE_EXTRACTION_PROMPT = `You are a recipe parser for a cooking app. Extract structured recipe data from the following OCR text.
 
 Return ONLY a valid JSON object with this exact structure (no markdown, no explanation, just the JSON):
 {
   "name": "Recipe Name",
   "description": "Brief 1-2 sentence description of the dish",
   "ingredients": [
-    { "name": "ingredient name", "amount": "1", "unit": "cup" }
+    { "name": "Chicken Breast", "amount": "2", "unit": "whole", "preparation": "diced" },
+    { "name": "Olive Oil", "amount": "2", "unit": "tbsp", "preparation": "" },
+    { "name": "Salt", "amount": "1", "unit": "to taste", "preparation": "" }
   ],
   "instructions": [
-    "Step 1 instruction text",
-    "Step 2 instruction text"
+    "Preheat the oven to 180C (350F).",
+    "Season the chicken with salt and pepper.",
+    "Heat olive oil in a large skillet over medium-high heat.",
+    "Sear chicken for 3 minutes per side until golden brown.",
+    "Transfer to the oven and bake for 20 minutes until cooked through."
   ],
   "prepTime": "15",
   "cookTime": "30",
   "servings": "4",
   "cuisine": "Italian",
   "category": "dinner",
+  "mealType": "Chicken",
   "difficulty": "medium",
-  "tags": ["pasta", "quick", "vegetarian"],
+  "tags": ["baked", "quick", "high-protein"],
   "dietaryInfo": {
     "vegetarian": false,
     "vegan": false,
-    "glutenFree": false,
-    "dairyFree": false
+    "glutenFree": true,
+    "dairyFree": true
   }
 }
 
-Rules:
-- For ingredients: amount should be a string number (e.g., "1", "0.5", "2"), unit should be the measurement unit (cup, tbsp, tsp, oz, lb, g, ml, etc.), name is the ingredient name
-- IMPORTANT: Keep ALL ingredient entries as separate items, even if the same ingredient appears multiple times with different amounts (e.g., "1 tsp salt" for seasoning and "salt and pepper to taste" should be TWO separate entries, not merged)
+INGREDIENT RULES:
+- "name": The ingredient only, in Title Case. NO preparation words in the name (e.g., "Onion" not "Onion, diced"). NO amounts or units in the name.
+- "amount": A string number (e.g., "1", "0.5", "2"). Convert fractions: 1/2 = "0.5", 1/4 = "0.25", 3/4 = "0.75", 1/3 = "0.33".
+- "unit": Use ONLY these values: g, tsp, tbsp, cup, ml, slice, clove, whole, pinch, dash, handful, bunch, can, sprig, head, stalk, to taste, to serve, for frying, for greasing. Use "whole" when counting items (e.g., "2 eggs" = amount "2", unit "whole"). Use "to taste" for "salt to taste" or "as needed".
+- "preparation": How the ingredient is prepared (e.g., "diced", "chopped", "minced", "sliced", "grated", "melted", "softened", "juiced", "zested"). Use empty string "" if no preparation is specified.
+- IMPORTANT: Keep ALL ingredient entries as separate items, even if the same ingredient appears multiple times with different amounts
 - DO NOT deduplicate or combine ingredients - preserve each line from the recipe exactly as a separate entry
-- For compound ingredients like "salt and pepper", split into separate entries: one for "salt" and one for "pepper"
+- For compound ingredients like "salt and pepper", split into separate entries: one for "Salt" and one for "Black Pepper"
+
+INSTRUCTION RULES:
+- Break instructions into short, single-action steps (aim for 100-250 characters each)
+- Each step should describe ONE action (e.g., "Preheat oven", "Mix dry ingredients", "Add eggs and stir")
+- If the source has long paragraphs, split them into individual steps
+- Do NOT prefix steps with "Step 1:", "1.", etc. - just the instruction text
+- Clean up any OCR artifacts or typos
+
+METADATA RULES:
 - For times: extract just the number in minutes as a string (e.g., "15" not "15 minutes")
 - For servings: just the number as a string
-- For category: use one of: breakfast, lunch, dinner, snack, dessert, appetizer
+- For category: use one of: breakfast, dinner, dessert, side, starter
+- For mealType: use one of: Beef, Chicken, Lamb, Pork, Seafood, Vegetarian, Vegan, Pasta, Dessert, Side, Breakfast, Starter, Goat, Miscellaneous
 - For difficulty: use one of: easy, medium, hard
-- For cuisine: identify the cuisine type (American, Italian, Mexican, Asian, Indian, etc.)
-- For tags: include relevant tags like cooking method, dietary info, occasion
-- For dietaryInfo: analyze ingredients to determine dietary flags
+- For cuisine: use one of: American, Asian, Australian, British, Canadian, Dutch, French, Indian, Irish, Italian, Jamaican, Mexican, Moroccan, Polish, Portuguese, Russian, South American, Spanish, Turkish, Ukrainian. Use the closest match if the exact cuisine is not listed.
+- For tags: include relevant tags like cooking method, dietary info, key ingredients
+- For dietaryInfo: analyze ingredients to determine dietary flags accurately
 - If information is not found, use empty string for strings, empty array for arrays, false for booleans
-- Clean up any OCR artifacts or typos in ingredient names and instructions
 
 OCR Text:
 `;
@@ -232,6 +251,7 @@ export async function formatRecipeWithBedrock(ocrText: string): Promise<FormatRe
             name: String(ing.name || ''),
             amount: String(ing.amount || ''),
             unit: String(ing.unit || ''),
+            preparation: String(ing.preparation || ''),
           }))
         : [],
       instructions: Array.isArray(parsed.instructions)
@@ -242,6 +262,7 @@ export async function formatRecipeWithBedrock(ocrText: string): Promise<FormatRe
       servings: String(parsed.servings || ''),
       cuisine: String(parsed.cuisine || ''),
       category: String(parsed.category || ''),
+      mealType: String(parsed.mealType || ''),
       difficulty: String(parsed.difficulty || 'medium'),
       tags: Array.isArray(parsed.tags) ? parsed.tags.map((t: any) => String(t)) : [],
       dietaryInfo: {
@@ -314,46 +335,64 @@ export async function formatRecipeWithRetry(
 }
 
 // URL-specific prompt for extracting recipes from web content
-const URL_RECIPE_EXTRACTION_PROMPT = `You are a recipe parser. Extract structured recipe data from the following web page content.
+const URL_RECIPE_EXTRACTION_PROMPT = `You are a recipe parser for a cooking app. Extract structured recipe data from the following web page content.
 
 Return ONLY a valid JSON object with this exact structure (no markdown, no explanation, just the JSON):
 {
   "name": "Recipe Name",
   "description": "Brief 1-2 sentence description of the dish",
   "ingredients": [
-    { "name": "ingredient name", "amount": "1", "unit": "cup" }
+    { "name": "Chicken Breast", "amount": "2", "unit": "whole", "preparation": "diced" },
+    { "name": "Olive Oil", "amount": "2", "unit": "tbsp", "preparation": "" },
+    { "name": "Salt", "amount": "1", "unit": "to taste", "preparation": "" }
   ],
   "instructions": [
-    "Step 1 instruction text",
-    "Step 2 instruction text"
+    "Preheat the oven to 180C (350F).",
+    "Season the chicken with salt and pepper.",
+    "Heat olive oil in a large skillet over medium-high heat.",
+    "Sear chicken for 3 minutes per side until golden brown.",
+    "Transfer to the oven and bake for 20 minutes until cooked through."
   ],
   "prepTime": "15",
   "cookTime": "30",
   "servings": "4",
   "cuisine": "Italian",
   "category": "dinner",
+  "mealType": "Chicken",
   "difficulty": "medium",
-  "tags": ["pasta", "quick", "vegetarian"],
+  "tags": ["baked", "quick", "high-protein"],
   "dietaryInfo": {
     "vegetarian": false,
     "vegan": false,
-    "glutenFree": false,
-    "dairyFree": false
+    "glutenFree": true,
+    "dairyFree": true
   }
 }
 
-Rules:
-- For ingredients: amount should be a string number (e.g., "1", "0.5", "2"), unit should be the measurement unit (cup, tbsp, tsp, oz, lb, g, ml, etc.), name is the ingredient name
+INGREDIENT RULES:
+- "name": The ingredient only, in Title Case. NO preparation words in the name (e.g., "Onion" not "Onion, diced"). NO amounts or units in the name.
+- "amount": A string number (e.g., "1", "0.5", "2"). Convert fractions: 1/2 = "0.5", 1/4 = "0.25", 3/4 = "0.75", 1/3 = "0.33".
+- "unit": Use ONLY these values: g, tsp, tbsp, cup, ml, slice, clove, whole, pinch, dash, handful, bunch, can, sprig, head, stalk, to taste, to serve, for frying, for greasing. Use "whole" when counting items (e.g., "2 eggs" = amount "2", unit "whole"). Use "to taste" for "salt to taste" or "as needed".
+- "preparation": How the ingredient is prepared (e.g., "diced", "chopped", "minced", "sliced", "grated", "melted", "softened", "juiced", "zested"). Use empty string "" if no preparation is specified.
 - IMPORTANT: Keep ALL ingredient entries as separate items, even if the same ingredient appears multiple times with different amounts
 - DO NOT deduplicate or combine ingredients - preserve each ingredient from the recipe exactly as a separate entry
-- For compound ingredients like "salt and pepper", split into separate entries: one for "salt" and one for "pepper"
+- For compound ingredients like "salt and pepper", split into separate entries: one for "Salt" and one for "Black Pepper"
+
+INSTRUCTION RULES:
+- Break instructions into short, single-action steps (aim for 100-250 characters each)
+- Each step should describe ONE action (e.g., "Preheat oven", "Mix dry ingredients", "Add eggs and stir")
+- If the source has long paragraphs, split them into individual steps
+- Do NOT prefix steps with "Step 1:", "1.", etc. - just the instruction text
+
+METADATA RULES:
 - For times: extract just the number in minutes as a string (e.g., "15" not "15 minutes")
 - For servings: just the number as a string
-- For category: use one of: breakfast, lunch, dinner, snack, dessert, appetizer
+- For category: use one of: breakfast, dinner, dessert, side, starter
+- For mealType: use one of: Beef, Chicken, Lamb, Pork, Seafood, Vegetarian, Vegan, Pasta, Dessert, Side, Breakfast, Starter, Goat, Miscellaneous
 - For difficulty: use one of: easy, medium, hard
-- For cuisine: identify the cuisine type (American, Italian, Mexican, Asian, Indian, etc.)
-- For tags: include relevant tags like cooking method, dietary info, occasion
-- For dietaryInfo: analyze ingredients to determine dietary flags
+- For cuisine: use one of: American, Asian, Australian, British, Canadian, Dutch, French, Indian, Irish, Italian, Jamaican, Mexican, Moroccan, Polish, Portuguese, Russian, South American, Spanish, Turkish, Ukrainian. Use the closest match if the exact cuisine is not listed.
+- For tags: include relevant tags like cooking method, dietary info, key ingredients
+- For dietaryInfo: analyze ingredients to determine dietary flags accurately
 - If information is not found, use empty string for strings, empty array for arrays, false for booleans
 - Ignore ads, navigation, comments, and non-recipe content
 - Focus on extracting the main recipe from the page
@@ -491,6 +530,7 @@ export async function formatRecipeFromUrl(webContent: string): Promise<FormatRes
             name: String(ing.name || ''),
             amount: String(ing.amount || ''),
             unit: String(ing.unit || ''),
+            preparation: String(ing.preparation || ''),
           }))
         : [],
       instructions: Array.isArray(parsed.instructions)
@@ -501,6 +541,7 @@ export async function formatRecipeFromUrl(webContent: string): Promise<FormatRes
       servings: String(parsed.servings || ''),
       cuisine: String(parsed.cuisine || ''),
       category: String(parsed.category || ''),
+      mealType: String(parsed.mealType || ''),
       difficulty: String(parsed.difficulty || 'medium'),
       tags: Array.isArray(parsed.tags) ? parsed.tags.map((t: any) => String(t)) : [],
       dietaryInfo: {

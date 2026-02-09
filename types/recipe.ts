@@ -4,6 +4,7 @@ export type Recipe = {
   description: string;
   cuisine: string;
   category: string;
+  mealType?: string;
   difficulty: string;
   servings: number;
   prepTime: number;

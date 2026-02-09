@@ -23,24 +23,26 @@ interface Props {
   onRecipeScanned: (recipe: {
     name: string;
     description: string;
-    ingredients: { name: string; amount: string; unit: string }[];
+    ingredients: { name: string; amount: string; unit: string; preparation?: string }[];
     instructions: string[];
     prepTime: string;
     cookTime: string;
     servings: string;
     cuisine: string;
     category: string;
+    mealType: string;
   }) => void;
   onRecipeAdded?: (recipe: {
     name: string;
     description: string;
-    ingredients: { name: string; amount: string; unit: string }[];
+    ingredients: { name: string; amount: string; unit: string; preparation?: string }[];
     instructions: string[];
     prepTime: string;
     cookTime: string;
     servings: string;
     cuisine: string;
     category: string;
+    mealType: string;
   }) => void;
 }
 
@@ -153,6 +155,7 @@ export default function UrlImportModal({
         servings: parsedRecipe.servings,
         cuisine: parsedRecipe.cuisine,
         category: parsedRecipe.category,
+        mealType: parsedRecipe.mealType,
       });
       handleClose();
     }
@@ -173,6 +176,7 @@ export default function UrlImportModal({
         servings: parsedRecipe.servings,
         cuisine: parsedRecipe.cuisine,
         category: parsedRecipe.category,
+        mealType: parsedRecipe.mealType,
       });
       handleClose();
     }
@@ -378,7 +382,7 @@ export default function UrlImportModal({
                 </View>
               )}
 
-              {(parsedRecipe.cuisine || parsedRecipe.category) && (
+              {(parsedRecipe.cuisine || parsedRecipe.category || parsedRecipe.mealType) && (
                 <View style={styles.metadataRow}>
                   {parsedRecipe.cuisine && (
                     <View
@@ -388,6 +392,17 @@ export default function UrlImportModal({
                       ]}>
                       <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 12 }}>
                         {parsedRecipe.cuisine}
+                      </Text>
+                    </View>
+                  )}
+                  {parsedRecipe.mealType && (
+                    <View
+                      style={[
+                        styles.metadataChip,
+                        { backgroundColor: isDark ? '#2c2c2e' : '#f2f2f7' },
+                      ]}>
+                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 12 }}>
+                        {parsedRecipe.mealType}
                       </Text>
                     </View>
                   )}
@@ -411,7 +426,10 @@ export default function UrlImportModal({
               <View
                 style={[styles.listContainer, { backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7' }]}>
                 {parsedRecipe.ingredients.map(
-                  (ing: { name: string; amount: string; unit: string }, idx: number) => (
+                  (
+                    ing: { name: string; amount: string; unit: string; preparation?: string },
+                    idx: number
+                  ) => (
                     <View
                       key={idx}
                       style={[
@@ -423,8 +441,9 @@ export default function UrlImportModal({
                       ]}>
                       <Text style={{ color: isDark ? '#fff' : '#000', fontSize: 15 }}>
                         {ing.amount ? `${ing.amount} ` : ''}
-                        {ing.unit ? `${ing.unit} ` : ''}
+                        {ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}
                         {ing.name}
+                        {ing.preparation ? `, ${ing.preparation}` : ''}
                       </Text>
                     </View>
                   )

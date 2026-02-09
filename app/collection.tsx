@@ -260,7 +260,7 @@ export default function Collection() {
             )}
           </View>
           <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginBottom: 8 }}>
-            {recipe.cuisine} • {recipe.difficulty} • {recipe.totalTime} min
+            {recipe.cuisine}{recipe.mealType ? ` • ${recipe.mealType}` : ''} • {recipe.difficulty} • {recipe.totalTime} min
           </Text>
           {missingCount !== undefined && (
             <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginBottom: 8 }}>
@@ -299,7 +299,7 @@ export default function Collection() {
                           fontSize: 13,
                           fontStyle: hasIng ? 'normal' : 'italic',
                         }}>
-                        {ing.amount ? `${ing.amount} ` : ''}{ing.unit ? `${ing.unit} ` : ''}{ing.name}
+                        {ing.amount ? `${ing.amount} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
                       </Text>
                     </View>
                   );
@@ -506,7 +506,7 @@ export default function Collection() {
                             fontSize: 14,
                             marginBottom: 8,
                           }}>
-                          {recipe.cuisine} • {recipe.difficulty} • {recipe.totalTime} min
+                          {recipe.cuisine}{recipe.mealType ? ` • ${recipe.mealType}` : ''} • {recipe.difficulty} • {recipe.totalTime} min
                         </Text>
                         <Text
                           style={{
@@ -556,7 +556,7 @@ export default function Collection() {
                                       fontSize: 13,
                                       fontStyle: hasIng ? 'normal' : 'italic',
                                     }}>
-                                    {ing.amount ? `${ing.amount} ` : ''}{ing.unit ? `${ing.unit} ` : ''}{ing.name}
+                                    {ing.amount ? `${ing.amount} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
                                   </Text>
                                 </View>
                               );

@@ -403,13 +403,14 @@ export function parseRecipeText(ocrResult: OCRResult): ParsedRecipe {
 export function convertToFormData(parsed: ParsedRecipe): {
   name: string;
   description: string;
-  ingredients: { name: string; amount: string; unit: string }[];
+  ingredients: { name: string; amount: string; unit: string; preparation?: string }[];
   instructions: string[];
   prepTime: string;
   cookTime: string;
   servings: string;
   cuisine: string;
   category: string;
+  mealType: string;
 } {
   return {
     name: parsed.name,
@@ -422,5 +423,6 @@ export function convertToFormData(parsed: ParsedRecipe): {
     servings: parsed.servings,
     cuisine: parsed.cuisine,
     category: parsed.category,
+    mealType: '',
   };
 }

@@ -94,15 +94,16 @@ export default function Cookbook() {
   // Form state
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [ingredients, setIngredients] = useState<{ name: string; amount: string; unit: string }[]>([
-    { name: '', amount: '', unit: '' },
-  ]);
+  const [ingredients, setIngredients] = useState<
+    { name: string; amount: string; unit: string; preparation?: string }[]
+  >([{ name: '', amount: '', unit: '' }]);
   const [instructions, setInstructions] = useState<string[]>(['']);
   const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
   const [servings, setServings] = useState('');
   const [cuisine, setCuisine] = useState('');
   const [category, setCategory] = useState('');
+  const [mealType, setMealType] = useState('');
 
   const loadRecipes = useCallback(async () => {
     setLoading(true);
@@ -230,13 +231,14 @@ export default function Cookbook() {
   const handleRecipeScanned = (scannedRecipe: {
     name: string;
     description: string;
-    ingredients: { name: string; amount: string; unit: string }[];
+    ingredients: { name: string; amount: string; unit: string; preparation?: string }[];
     instructions: string[];
     prepTime: string;
     cookTime: string;
     servings: string;
     cuisine: string;
     category: string;
+    mealType: string;
   }) => {
     // Populate form with scanned data
     setName(scannedRecipe.name);
@@ -252,6 +254,7 @@ export default function Cookbook() {
     setServings(scannedRecipe.servings);
     setCuisine(scannedRecipe.cuisine);
     setCategory(scannedRecipe.category);
+    setMealType(scannedRecipe.mealType);
     // Show the form with pre-filled data
     setShowForm(true);
   };
@@ -259,13 +262,14 @@ export default function Cookbook() {
   const handleRecipeAdded = async (scannedRecipe: {
     name: string;
     description: string;
-    ingredients: { name: string; amount: string; unit: string }[];
+    ingredients: { name: string; amount: string; unit: string; preparation?: string }[];
     instructions: string[];
     prepTime: string;
     cookTime: string;
     servings: string;
     cuisine: string;
     category: string;
+    mealType: string;
   }) => {
     const validIngredients = scannedRecipe.ingredients.filter((i) => i.name.trim());
     const validInstructions = scannedRecipe.instructions.filter((i) => i.trim());
@@ -825,7 +829,10 @@ export default function Cookbook() {
                     Ingredients:
                   </Text>
                   {recipeObj.ingredients.map(
-                    (ing: { name: string; amount: number; unit: string }, idx: number) => {
+                    (
+                      ing: { name: string; amount: number; unit: string; preparation?: string | null },
+                      idx: number
+                    ) => {
                       const hasIng = hasIngredient(ing.name, fridgeIngredients);
                       return (
                         <View
@@ -845,7 +852,8 @@ export default function Cookbook() {
                               fontSize: 13,
                               fontStyle: hasIng ? 'normal' : 'italic',
                             }}>
-                            {ing.amount ? `${ing.amount} ` : ''}{ing.unit ? `${ing.unit} ` : ''}{ing.name}
+                            {ing.amount ? `${ing.amount} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
+                            {ing.preparation && `, ${ing.preparation}`}
                           </Text>
                         </View>
                       );
