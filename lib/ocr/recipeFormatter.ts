@@ -13,7 +13,7 @@ const AWS_REGION = Constants.expoConfig?.extra?.awsRegion || 'us-east-1';
 export interface FormattedRecipe {
   name: string;
   description: string;
-  ingredients: { name: string; amount: string; unit: string; preparation?: string }[];
+  ingredients: { name: string; amount: string; unit: string; preparation?: string; alternatives?: string[] }[];
   instructions: string[];
   prepTime: string;
   cookTime: string;
@@ -46,7 +46,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
   "description": "Brief 1-2 sentence description of the dish",
   "ingredients": [
     { "name": "Chicken Breast", "amount": "2", "unit": "whole", "preparation": "diced" },
-    { "name": "Olive Oil", "amount": "2", "unit": "tbsp", "preparation": "" },
+    { "name": "Vegetable Oil", "amount": "2", "unit": "tbsp", "preparation": "", "alternatives": ["Sunflower Oil"] },
     { "name": "Salt", "amount": "1", "unit": "to taste", "preparation": "" }
   ],
   "instructions": [
@@ -80,6 +80,7 @@ INGREDIENT RULES:
 - IMPORTANT: Keep ALL ingredient entries as separate items, even if the same ingredient appears multiple times with different amounts
 - DO NOT deduplicate or combine ingredients - preserve each line from the recipe exactly as a separate entry
 - For compound ingredients like "salt and pepper", split into separate entries: one for "Salt" and one for "Black Pepper"
+- ALTERNATIVE INGREDIENTS: When the recipe says "X or Y" for an ingredient (e.g., "vegetable or sunflower oil", "heavy cream or coconut cream", "veg or chicken stock"), use the FIRST option as the "name" and list the other option(s) in an "alternatives" array. Expand abbreviations to full names (e.g., "veg stock" becomes "Vegetable Stock"). Each alternative must be a complete, Title Case ingredient name. If there are no alternatives, omit the "alternatives" field entirely.
 
 INSTRUCTION RULES:
 - Break instructions into short, single-action steps (aim for 100-250 characters each)
@@ -252,6 +253,9 @@ export async function formatRecipeWithBedrock(ocrText: string): Promise<FormatRe
             amount: String(ing.amount || ''),
             unit: String(ing.unit || ''),
             preparation: String(ing.preparation || ''),
+            ...(Array.isArray(ing.alternatives) && ing.alternatives.length > 0
+              ? { alternatives: ing.alternatives.map((a: any) => String(a)) }
+              : {}),
           }))
         : [],
       instructions: Array.isArray(parsed.instructions)
@@ -343,7 +347,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no expla
   "description": "Brief 1-2 sentence description of the dish",
   "ingredients": [
     { "name": "Chicken Breast", "amount": "2", "unit": "whole", "preparation": "diced" },
-    { "name": "Olive Oil", "amount": "2", "unit": "tbsp", "preparation": "" },
+    { "name": "Vegetable Oil", "amount": "2", "unit": "tbsp", "preparation": "", "alternatives": ["Sunflower Oil"] },
     { "name": "Salt", "amount": "1", "unit": "to taste", "preparation": "" }
   ],
   "instructions": [
@@ -377,6 +381,7 @@ INGREDIENT RULES:
 - IMPORTANT: Keep ALL ingredient entries as separate items, even if the same ingredient appears multiple times with different amounts
 - DO NOT deduplicate or combine ingredients - preserve each ingredient from the recipe exactly as a separate entry
 - For compound ingredients like "salt and pepper", split into separate entries: one for "Salt" and one for "Black Pepper"
+- ALTERNATIVE INGREDIENTS: When the recipe says "X or Y" for an ingredient (e.g., "vegetable or sunflower oil", "heavy cream or coconut cream", "veg or chicken stock"), use the FIRST option as the "name" and list the other option(s) in an "alternatives" array. Expand abbreviations to full names (e.g., "veg stock" becomes "Vegetable Stock"). Each alternative must be a complete, Title Case ingredient name. If there are no alternatives, omit the "alternatives" field entirely.
 
 INSTRUCTION RULES:
 - Break instructions into short, single-action steps (aim for 100-250 characters each)
@@ -531,6 +536,9 @@ export async function formatRecipeFromUrl(webContent: string): Promise<FormatRes
             amount: String(ing.amount || ''),
             unit: String(ing.unit || ''),
             preparation: String(ing.preparation || ''),
+            ...(Array.isArray(ing.alternatives) && ing.alternatives.length > 0
+              ? { alternatives: ing.alternatives.map((a: any) => String(a)) }
+              : {}),
           }))
         : [],
       instructions: Array.isArray(parsed.instructions)

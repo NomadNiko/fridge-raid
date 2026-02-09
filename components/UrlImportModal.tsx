@@ -16,6 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { fetchUrlWithRetry } from '../lib/ocr/urlFetcher';
 import { formatRecipeFromUrlWithRetry, FormattedRecipe } from '../lib/ocr/recipeFormatter';
+import IngredientAlternativePicker from './IngredientAlternativePicker';
 
 interface Props {
   visible: boolean;
@@ -46,7 +47,7 @@ interface Props {
   }) => void;
 }
 
-type ImportStatus = 'url-input' | 'fetching' | 'parsing' | 'preview' | 'error';
+type ImportStatus = 'url-input' | 'fetching' | 'parsing' | 'choosing-alternatives' | 'preview' | 'error';
 
 export default function UrlImportModal({
   visible,
@@ -79,6 +80,44 @@ export default function UrlImportModal({
   const handleClose = () => {
     resetState();
     onClose();
+  };
+
+  const hasAlternatives = (recipe: FormattedRecipe): boolean => {
+    return recipe.ingredients.some(
+      (ing) => ing.alternatives && ing.alternatives.length > 0
+    );
+  };
+
+  const getIngredientsWithAlternatives = (recipe: FormattedRecipe) => {
+    return recipe.ingredients
+      .map((ing, index) => ({ ...ing, index }))
+      .filter((ing) => ing.alternatives && ing.alternatives.length > 0) as Array<{
+        index: number;
+        name: string;
+        amount: string;
+        unit: string;
+        preparation?: string;
+        alternatives: string[];
+      }>;
+  };
+
+  const handleAlternativesChosen = (choices: { index: number; chosenName: string }[]) => {
+    if (!parsedRecipe) return;
+
+    const updatedIngredients = parsedRecipe.ingredients.map((ing, idx) => {
+      const choice = choices.find((c) => c.index === idx);
+      const { alternatives, ...rest } = ing;
+      if (choice) {
+        return { ...rest, name: choice.chosenName };
+      }
+      return rest;
+    });
+
+    setParsedRecipe({
+      ...parsedRecipe,
+      ingredients: updatedIngredients,
+    });
+    setStatus('preview');
   };
 
   const handleImport = async () => {
@@ -127,7 +166,11 @@ export default function UrlImportModal({
       }
 
       setParsedRecipe(formatResult.recipe);
-      setStatus('preview');
+      if (hasAlternatives(formatResult.recipe)) {
+        setStatus('choosing-alternatives');
+      } else {
+        setStatus('preview');
+      }
     } catch (err) {
       setError(`Import failed: ${err}`);
       setStatus('error');
@@ -297,6 +340,16 @@ export default function UrlImportModal({
               </TouchableOpacity>
             </View>
           </View>
+        );
+
+      case 'choosing-alternatives':
+        if (!parsedRecipe) return null;
+        return (
+          <IngredientAlternativePicker
+            ingredients={getIngredientsWithAlternatives(parsedRecipe)}
+            onComplete={handleAlternativesChosen}
+            isDark={isDark}
+          />
         );
 
       case 'preview':
@@ -540,7 +593,11 @@ export default function UrlImportModal({
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.headerTitle, { color: isDark ? '#fff' : '#000' }]}>
-            {status === 'preview' ? 'Review Recipe' : 'Import from URL'}
+            {status === 'preview'
+              ? 'Review Recipe'
+              : status === 'choosing-alternatives'
+                ? 'Choose Ingredients'
+                : 'Import from URL'}
           </Text>
           <TouchableOpacity onPress={handleClose}>
             <Ionicons name="close" size={28} color={isDark ? '#fff' : '#000'} />

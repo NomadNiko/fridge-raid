@@ -16,6 +16,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { performOCRWithRetry, OCRResult } from '../lib/ocr/ocrService';
 import { formatRecipeWithRetry, FormattedRecipe } from '../lib/ocr/recipeFormatter';
+import IngredientAlternativePicker from './IngredientAlternativePicker';
 
 interface Props {
   visible: boolean;
@@ -46,7 +47,7 @@ interface Props {
   }) => void;
 }
 
-type ScanStatus = 'page-select' | 'camera' | 'processing' | 'parsing' | 'preview' | 'error';
+type ScanStatus = 'page-select' | 'camera' | 'processing' | 'parsing' | 'choosing-alternatives' | 'preview' | 'error';
 
 export default function RecipeScannerModal({
   visible,
@@ -92,6 +93,44 @@ export default function RecipeScannerModal({
   const handleClose = () => {
     resetState();
     onClose();
+  };
+
+  const hasAlternatives = (recipe: FormattedRecipe): boolean => {
+    return recipe.ingredients.some(
+      (ing) => ing.alternatives && ing.alternatives.length > 0
+    );
+  };
+
+  const getIngredientsWithAlternatives = (recipe: FormattedRecipe) => {
+    return recipe.ingredients
+      .map((ing, index) => ({ ...ing, index }))
+      .filter((ing) => ing.alternatives && ing.alternatives.length > 0) as Array<{
+        index: number;
+        name: string;
+        amount: string;
+        unit: string;
+        preparation?: string;
+        alternatives: string[];
+      }>;
+  };
+
+  const handleAlternativesChosen = (choices: { index: number; chosenName: string }[]) => {
+    if (!parsedRecipe) return;
+
+    const updatedIngredients = parsedRecipe.ingredients.map((ing, idx) => {
+      const choice = choices.find((c) => c.index === idx);
+      const { alternatives, ...rest } = ing;
+      if (choice) {
+        return { ...rest, name: choice.chosenName };
+      }
+      return rest;
+    });
+
+    setParsedRecipe({
+      ...parsedRecipe,
+      ingredients: updatedIngredients,
+    });
+    setStatus('preview');
   };
 
   const handlePageSelect = (pages: number) => {
@@ -151,7 +190,11 @@ export default function RecipeScannerModal({
       }
 
       setParsedRecipe(formatResult.recipe);
-      setStatus('preview');
+      if (hasAlternatives(formatResult.recipe)) {
+        setStatus('choosing-alternatives');
+      } else {
+        setStatus('preview');
+      }
     } catch (err) {
       setError(`Processing failed: ${err}`);
       setStatus('error');
@@ -256,7 +299,11 @@ export default function RecipeScannerModal({
       }
 
       setParsedRecipe(formatResult.recipe);
-      setStatus('preview');
+      if (hasAlternatives(formatResult.recipe)) {
+        setStatus('choosing-alternatives');
+      } else {
+        setStatus('preview');
+      }
     } catch (err) {
       setError(`Processing failed: ${err}`);
       setStatus('error');
@@ -536,6 +583,16 @@ export default function RecipeScannerModal({
           </View>
         );
 
+      case 'choosing-alternatives':
+        if (!parsedRecipe) return null;
+        return (
+          <IngredientAlternativePicker
+            ingredients={getIngredientsWithAlternatives(parsedRecipe)}
+            onComplete={handleAlternativesChosen}
+            isDark={isDark}
+          />
+        );
+
       case 'preview':
         if (!parsedRecipe) return null;
         return (
@@ -700,9 +757,11 @@ export default function RecipeScannerModal({
             ]}>
             {status === 'preview'
               ? 'Review Recipe'
-              : status === 'page-select'
-                ? 'Scan Recipe'
-                : `Scan Recipe${totalPages > 1 ? ` (${currentPage}/${totalPages})` : ''}`}
+              : status === 'choosing-alternatives'
+                ? 'Choose Ingredients'
+                : status === 'page-select'
+                  ? 'Scan Recipe'
+                  : `Scan Recipe${totalPages > 1 ? ` (${currentPage}/${totalPages})` : ''}`}
           </Text>
           <TouchableOpacity onPress={handleClose}>
             <Ionicons

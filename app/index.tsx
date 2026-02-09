@@ -22,7 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 const ITEMS_PER_PAGE = 10;
 
-export default function Home() {
+export default function Search() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [search, setSearch] = useState('');
