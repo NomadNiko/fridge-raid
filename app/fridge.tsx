@@ -6,7 +6,6 @@ import {
   useColorScheme,
   ActivityIndicator,
   ScrollView,
-  Share,
 } from 'react-native';
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -15,111 +14,22 @@ import {
   addToFridge,
   removeFromFridge,
   getFridgeWithDetails,
-  getCollectionWithDetails,
-  getUserRecipes,
-  getCustomIngredients,
-  addCustomToFridge,
   removeCustomFromFridge,
-  findOrCreateCustomIngredient,
-  CustomIngredient,
-  UserRecipe,
 } from '../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types/ingredient';
-import { matchIngredient, findBuiltInIngredient, findCustomIngredient } from '../lib/ingredientMatcher';
 import IngredientCard from '../components/IngredientCard';
-import { UnitSystem, getUnitSystem, convertUnit } from '../lib/unitConversion';
 
 const ITEMS_PER_PAGE = 10;
-
-type ShoppingListEntry = {
-  recipeName: string;
-  amount: number;
-  unit: string;
-  multiplier: number;
-};
-
-type ShoppingListItem = {
-  name: string;
-  entries: ShoppingListEntry[];
-  totalsByUnit: { unit: string; total: number }[];
-};
-
-const formatAmount = (amount: number): string => {
-  if (amount === 0) return '';
-  const rounded = Math.round(amount * 100) / 100;
-  return rounded.toString();
-};
-
-function buildShoppingList(
-  fridgeIngredients: (Ingredient | CustomIngredient)[],
-  collection: any[],
-  userRecipes: UserRecipe[]
-): ShoppingListItem[] {
-  const missingIngredients = new Map<string, ShoppingListItem>();
-
-  const processRecipeIngredients = (
-    ingredients: { name: string; amount: number; unit: string }[],
-    recipeName: string,
-    multiplier: number
-  ) => {
-    ingredients.forEach((ing) => {
-      const matched = matchIngredient(ing.name, fridgeIngredients);
-      if (!matched) {
-        const key = ing.name.toLowerCase();
-        if (!missingIngredients.has(key)) {
-          missingIngredients.set(key, { name: ing.name, entries: [], totalsByUnit: [] });
-        }
-        missingIngredients.get(key)!.entries.push({
-          recipeName,
-          amount: ing.amount,
-          unit: ing.unit,
-          multiplier,
-        });
-      }
-    });
-  };
-
-  collection.forEach((item) => {
-    if (item.recipe && item.includeInShoppingList !== false) {
-      processRecipeIngredients(
-        item.recipe.ingredients,
-        item.recipe.name,
-        item.multiplier ?? 1
-      );
-    }
-  });
-
-  userRecipes.forEach((recipe) => {
-    if (recipe.includeInShoppingList !== false) {
-      processRecipeIngredients(recipe.ingredients, recipe.name, recipe.multiplier ?? 1);
-    }
-  });
-
-  for (const item of missingIngredients.values()) {
-    const unitTotals = new Map<string, number>();
-    item.entries.forEach((e) => {
-      const u = e.unit || '';
-      unitTotals.set(u, (unitTotals.get(u) || 0) + e.amount * e.multiplier);
-    });
-    item.totalsByUnit = Array.from(unitTotals.entries()).map(([unit, total]) => ({ unit, total }));
-  }
-
-  return Array.from(missingIngredients.values());
-}
 
 export default function Fridge() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [search, setSearch] = useState('');
   const [allIngredients, setAllIngredients] = useState<Ingredient[]>([]);
-  const [customIngredients, setCustomIngredients] = useState<CustomIngredient[]>([]);
   const [userFridge, setUserFridge] = useState<any[]>([]);
-  const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [unitSystem, setUnitSystemState] = useState<UnitSystem>('original');
   const [fridgeExpanded, setFridgeExpanded] = useState(true);
-  const [shoppingExpanded, setShoppingExpanded] = useState(true);
   const [allIngredientsExpanded, setAllIngredientsExpanded] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -127,21 +37,12 @@ export default function Fridge() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [ingredients, custom, fridge, collection, userRecipes, savedUnitSystem] = await Promise.all([
+    const [ingredients, fridge] = await Promise.all([
       getIngredients(),
-      getCustomIngredients(),
       getFridgeWithDetails(),
-      getCollectionWithDetails(),
-      getUserRecipes(),
-      getUnitSystem(),
     ]);
     setAllIngredients(ingredients);
-    setCustomIngredients(custom);
     setUserFridge(fridge);
-    setUnitSystemState(savedUnitSystem);
-
-    const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
-    setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
     setLoading(false);
   }, []);
 
@@ -200,15 +101,8 @@ export default function Fridge() {
     toggleInProgress.current.add(ingredientId);
     try {
       await addToFridge(ingredientId);
-      const [fridge, collection, userRecipes] = await Promise.all([
-        getFridgeWithDetails(),
-        getCollectionWithDetails(),
-        getUserRecipes(),
-      ]);
+      const fridge = await getFridgeWithDetails();
       setUserFridge(fridge);
-
-      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
-      setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
     } finally {
       toggleInProgress.current.delete(ingredientId);
     }
@@ -224,94 +118,10 @@ export default function Fridge() {
       } else {
         await removeFromFridge(ingredientId);
       }
-      const [fridge, collection, userRecipes] = await Promise.all([
-        getFridgeWithDetails(),
-        getCollectionWithDetails(),
-        getUserRecipes(),
-      ]);
+      const fridge = await getFridgeWithDetails();
       setUserFridge(fridge);
-
-      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
-      setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
     } finally {
       toggleInProgress.current.delete(key as number);
-    }
-  };
-
-  const handleAddCustomToFridge = async (customIngredientId: number) => {
-    const key = `custom-${customIngredientId}`;
-    if (toggleInProgress.current.has(key as unknown as number)) return;
-    toggleInProgress.current.add(key as unknown as number);
-    try {
-      await addCustomToFridge(customIngredientId);
-      const [fridge, collection, userRecipes] = await Promise.all([
-        getFridgeWithDetails(),
-        getCollectionWithDetails(),
-        getUserRecipes(),
-      ]);
-      setUserFridge(fridge);
-
-      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
-      setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
-    } finally {
-      toggleInProgress.current.delete(key as unknown as number);
-    }
-  };
-
-  const handleAddNewCustomIngredient = async (name: string, unit: string) => {
-    try {
-      const newCustom = await findOrCreateCustomIngredient(name, unit);
-      await addCustomToFridge(newCustom.id);
-      const [fridge, custom, collection, userRecipes] = await Promise.all([
-        getFridgeWithDetails(),
-        getCustomIngredients(),
-        getCollectionWithDetails(),
-        getUserRecipes(),
-      ]);
-      setUserFridge(fridge);
-      setCustomIngredients(custom);
-
-      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
-      setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
-    } catch (e) {
-      console.error('Failed to add custom ingredient:', e);
-    }
-  };
-
-  const handleExportShoppingList = async () => {
-    if (shoppingList.length === 0) return;
-
-    const today = new Date().toLocaleDateString();
-
-    // Get unique recipe names from shopping list entries
-    const recipeNames = Array.from(
-      new Set(shoppingList.flatMap((item) => item.entries.map((entry) => entry.recipeName)))
-    ).sort();
-
-    const listText = shoppingList
-      .map((item) => {
-        const totalText =
-          item.totalsByUnit.length > 0
-            ? ` — ${item.totalsByUnit
-                .map((t) => {
-                  const c = convertUnit(t.total, t.unit, unitSystem);
-                  return `${formatAmount(c.amount)}${c.unit && c.unit !== 'whole' ? ` ${c.unit}` : ''}`;
-                })
-                .join(', ')}`
-            : '';
-        return `• ${item.name}${totalText}`;
-      })
-      .join('\n');
-
-    const shareText = `Shopping List - ${today}\n\nFor recipes:\n${recipeNames.map((name) => `• ${name}`).join('\n')}\n\nIngredients:\n${listText}`;
-
-    try {
-      await Share.share({
-        message: shareText,
-        title: 'Shopping List',
-      });
-    } catch (error) {
-      console.error('Error sharing shopping list:', error);
     }
   };
 
@@ -423,145 +233,12 @@ export default function Fridge() {
         </View>
 
         <View style={{ paddingHorizontal: 16 }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 8,
-            }}>
-            <TouchableOpacity
-              onPress={() => setShoppingExpanded(!shoppingExpanded)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                flex: 1,
-              }}>
-              <Text
-                style={{
-                  color: isDark ? '#ffffff' : '#000000',
-                  fontSize: 18,
-                  fontWeight: '600',
-                  marginRight: 8,
-                }}>
-                Shopping List ({shoppingList.length})
-              </Text>
-              <Ionicons
-                name={shoppingExpanded ? 'chevron-up' : 'chevron-down'}
-                size={24}
-                color={isDark ? '#ffffff' : '#000000'}
-              />
-            </TouchableOpacity>
-            {shoppingList.length > 0 && (
-              <TouchableOpacity
-                onPress={handleExportShoppingList}
-                accessible={true}
-                accessibilityLabel="Export shopping list"
-                accessibilityRole="button"
-                style={{
-                  backgroundColor: '#007aff',
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 6,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                }}>
-                <Ionicons name="share-outline" size={16} color="#ffffff" />
-                <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>Export</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {shoppingExpanded &&
-            (shoppingList.length === 0 ? (
-              <View style={{ alignItems: 'center', marginVertical: 20 }}>
-                <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
-                  No missing ingredients
-                </Text>
-              </View>
-            ) : (
-              shoppingList.map((item, idx) => {
-                const builtInIng = findBuiltInIngredient(item.name, allIngredients);
-                const customIng = findCustomIngredient(item.name, customIngredients);
-                const firstUnit = item.entries.length > 0 ? item.entries[0].unit : '';
-                return (
-                  <View
-                    key={idx}
-                    style={{
-                      backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                      padding: 12,
-                      borderRadius: 8,
-                      marginBottom: 8,
-                    }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            color: isDark ? '#ffffff' : '#000000',
-                            fontSize: 16,
-                            fontWeight: '600',
-                            marginBottom: 2,
-                          }}>
-                          {item.name}
-                          {item.totalsByUnit.length > 0 && (
-                            <Text style={{ fontWeight: '400' }}>
-                              {' — '}
-                              {item.totalsByUnit
-                                .map((t) => {
-                                  const c = convertUnit(t.total, t.unit, unitSystem);
-                                  return `${formatAmount(c.amount)}${c.unit && c.unit !== 'whole' ? ` ${c.unit}` : ''}`;
-                                })
-                                .join(', ')}
-                            </Text>
-                          )}
-                        </Text>
-                        <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 12, marginTop: 2 }}>
-                          {item.entries
-                            .map((e) => {
-                              const c = convertUnit(e.amount * e.multiplier, e.unit, unitSystem);
-                              return `${formatAmount(c.amount)}${c.unit && c.unit !== 'whole' ? ` ${c.unit}` : ''} from ${e.recipeName}${e.multiplier !== 1 ? ` (${e.multiplier}x)` : ''}`;
-                            })
-                            .join(', ')}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => {
-                          if (builtInIng) {
-                            handleAddToFridge(builtInIng.id);
-                          } else if (customIng) {
-                            handleAddCustomToFridge(customIng.id);
-                          } else {
-                            handleAddNewCustomIngredient(item.name, firstUnit);
-                          }
-                        }}
-                        accessible={true}
-                        accessibilityLabel={`Add ${item.name} to fridge`}
-                        accessibilityRole="button"
-                        style={{
-                          backgroundColor: '#007aff',
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          borderRadius: 6,
-                          marginLeft: 8,
-                          alignSelf: 'center',
-                        }}>
-                        <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>
-                          Add
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
-              })
-            ))}
-
           <TouchableOpacity
             onPress={() => setFridgeExpanded(!fridgeExpanded)}
             style={{
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginTop: 16,
               marginBottom: 8,
             }}>
             <Text

@@ -68,7 +68,21 @@ export const ingredientsData = [
     name: 'Salt',
     category: 'spices',
     images: ['salt.jpg'],
-    alternativeNames: ['Table Salt', 'Sea Salt', 'Kosher Salt', 'Fine Salt', 'Cooking Salt'],
+    alternativeNames: ['Table Salt', 'Iodized Salt', 'Fine Salt'],
+  },
+  {
+    id: 5002,
+    name: 'Sea Salt',
+    category: 'spices',
+    images: ['salt.jpg'],
+    alternativeNames: ['Sea Salt'],
+  },
+  {
+    id: 5001,
+    name: 'Kosher Salt',
+    category: 'spices',
+    images: ['salt.jpg'],
+    alternativeNames: ['Kosher Salt', 'Coarse Salt', 'Cooking Salt'],
   },
   {
     id: 6,
@@ -635,7 +649,7 @@ export const ingredientsData = [
   {
     id: 51,
     name: 'Water',
-    category: 'beverages',
+    category: 'beverage',
     images: ['water.jpg'],
     alternativeNames: [
       'Cold Water',
@@ -2391,7 +2405,7 @@ export const ingredientsData = [
   {
     id: 265,
     name: 'Star Anise',
-    category: 'sppices',
+    category: 'spices',
     images: [],
     alternativeNames: ['Whole Star Anise', 'Star Anise Pods', 'Chinese Star Anise', 'Anise Star'],
   },
@@ -5168,7 +5182,7 @@ export const ingredientsData = [
   {
     id: 703,
     name: 'Soda Water',
-    category: 'other',
+    category: 'beverage',
     images: [],
     alternativeNames: [],
   },

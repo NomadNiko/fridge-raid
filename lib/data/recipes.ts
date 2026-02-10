@@ -1045,7 +1045,7 @@ export const recipesData = [
   },
   {
     id: 34,
-    name: 'Apricot & Turkish delight mess',
+    name: 'Apricot & Turkish Delight Mess',
     description: 'Turkish Dessert',
     cuisine: 'Turkish',
     category: 'dessert',

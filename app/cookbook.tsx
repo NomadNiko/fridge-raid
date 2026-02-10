@@ -9,16 +9,23 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useState, useCallback, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
+  getRecipes,
   getUserRecipes,
   addUserRecipe,
   deleteUserRecipe,
   updateUserRecipe,
   UserRecipe,
   getFridgeWithDetails,
+  getCollectionWithDetails,
+  addToCollection,
+  removeFromCollection,
+  getUserCollection,
+  updateCollectionItem,
 } from '../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import RecipeDetailModal from '../components/RecipeDetailModal';
@@ -27,10 +34,12 @@ import UrlImportModal from '../components/UrlImportModal';
 import { Recipe } from '../types';
 import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
+import { getRecipeImage } from '../lib/images';
 import { UnitSystem, getUnitSystem, convertUnit } from '../lib/unitConversion';
 import { useRevenueCat } from '../lib/revenueCat';
 
 const ITEMS_PER_PAGE = 10;
+const MULTIPLIER_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3];
 
 // Parse fraction strings (like "½", "1/2", "1 ½") to decimal numbers
 const parseFractionAmount = (amount: string): number => {
@@ -40,10 +49,24 @@ const parseFractionAmount = (amount: string): number => {
 
   // Unicode fraction map
   const unicodeFractions: Record<string, number> = {
-    '½': 0.5, '⅓': 1/3, '⅔': 2/3, '¼': 0.25, '¾': 0.75,
-    '⅕': 0.2, '⅖': 0.4, '⅗': 0.6, '⅘': 0.8,
-    '⅙': 1/6, '⅚': 5/6, '⅐': 1/7, '⅛': 0.125, '⅜': 0.375,
-    '⅝': 0.625, '⅞': 0.875, '⅑': 1/9, '⅒': 0.1,
+    '½': 0.5,
+    '⅓': 1 / 3,
+    '⅔': 2 / 3,
+    '¼': 0.25,
+    '¾': 0.75,
+    '⅕': 0.2,
+    '⅖': 0.4,
+    '⅗': 0.6,
+    '⅘': 0.8,
+    '⅙': 1 / 6,
+    '⅚': 5 / 6,
+    '⅐': 1 / 7,
+    '⅛': 0.125,
+    '⅜': 0.375,
+    '⅝': 0.625,
+    '⅞': 0.875,
+    '⅑': 1 / 9,
+    '⅒': 0.1,
   };
 
   // Check for standalone unicode fraction
@@ -76,15 +99,13 @@ const parseFractionAmount = (amount: string): number => {
     const whole = parseFloat(mixedMatch[1]);
     const num = parseFloat(mixedMatch[2]);
     const denom = parseFloat(mixedMatch[3]);
-    if (denom !== 0) return whole + (num / denom);
+    if (denom !== 0) return whole + num / denom;
   }
 
   // Fall back to parseFloat for regular numbers
   const parsed = parseFloat(str);
   return isNaN(parsed) ? 0 : parsed;
 };
-
-const MULTIPLIER_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3];
 
 const formatAmount = (amount: number): string => {
   if (amount === 0) return '';
@@ -96,6 +117,8 @@ export default function Cookbook() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [recipes, setRecipes] = useState<UserRecipe[]>([]);
+  const [userCollection, setUserCollection] = useState<any[]>([]);
+  const [suggestedRecipes, setSuggestedRecipes] = useState<any[]>([]);
   const [fridgeIngredients, setFridgeIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [unitSystem, setUnitSystemState] = useState<UnitSystem>('original');
@@ -104,10 +127,21 @@ export default function Cookbook() {
   const [showUrlImport, setShowUrlImport] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [selectedRecipeMultiplier, setSelectedRecipeMultiplier] = useState(1);
-  const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedRecipeSource, setSelectedRecipeSource] = useState<{
+    type: 'cookbook' | 'collection';
+    id: number;
+  } | null>(null);
+  const [cookbookExpanded, setCookbookExpanded] = useState(true);
+  const [collectionExpanded, setCollectionExpanded] = useState(true);
+  const [suggestedExpanded, setSuggestedExpanded] = useState(true);
+  const [cookbookPage, setCookbookPage] = useState(1);
+  const [collectionPage, setCollectionPage] = useState(1);
+  const [suggestedPage, setSuggestedPage] = useState(1);
   const scrollViewRef = useRef<ScrollView>(null);
-  const recipesHeaderRef = useRef<View>(null);
+  const cookbookHeaderRef = useRef<View>(null);
+  const collectionHeaderRef = useRef<View>(null);
+  const suggestedHeaderRef = useRef<View>(null);
+  const toggleInProgress = useRef<Set<number>>(new Set());
   const { isPremium, presentPaywallIfNeeded } = useRevenueCat();
 
   // Form state
@@ -124,21 +158,54 @@ export default function Cookbook() {
   const [category, setCategory] = useState('');
   const [mealType, setMealType] = useState('');
 
-  const loadRecipes = useCallback(async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
-    setCurrentPage(1);
-    const [userRecipes, fridge, savedUnitSystem] = await Promise.all([getUserRecipes(), getFridgeWithDetails(), getUnitSystem()]);
+    setCookbookPage(1);
+    setCollectionPage(1);
+    setSuggestedPage(1);
+    const [userRecipes, fridge, collection, allRecipes, savedUnitSystem] = await Promise.all([
+      getUserRecipes(),
+      getFridgeWithDetails(),
+      getCollectionWithDetails(),
+      getRecipes(),
+      getUnitSystem(),
+    ]);
     setRecipes(userRecipes);
+    setUserCollection(collection);
+    setUnitSystemState(savedUnitSystem);
+
     const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
     setFridgeIngredients(fridgeIngs);
-    setUnitSystemState(savedUnitSystem);
+
+    // Build suggested recipes (not in collection)
+    const collectionRecipeIds = collection.map((item) => item.recipeId);
+    const recipesNotInCollection = allRecipes.filter(
+      (recipe: Recipe) => !collectionRecipeIds.includes(recipe.id)
+    );
+
+    const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
+      const haveCount = recipe.ingredients.filter((ing: { name: string }) =>
+        hasIngredient(ing.name, fridgeIngs)
+      ).length;
+      const missingCount = recipe.ingredients.filter(
+        (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngs)
+      ).length;
+      return { recipe, haveCount, missingCount };
+    });
+
+    const sorted = recipesWithMissing
+      .filter((item: any) => item.haveCount > 0)
+      .sort((a: any, b: any) => a.missingCount - b.missingCount)
+      .slice(0, 50);
+
+    setSuggestedRecipes(sorted);
     setLoading(false);
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadRecipes();
-    }, [loadRecipes])
+      loadData();
+    }, [loadData])
   );
 
   const resetForm = () => {
@@ -193,10 +260,10 @@ export default function Cookbook() {
 
     resetForm();
     setShowForm(false);
-    loadRecipes();
+    loadData();
   };
 
-  const handleDelete = (id: number, recipeName: string) => {
+  const handleDeleteCookbookRecipe = (id: number, recipeName: string) => {
     Alert.alert('Delete Recipe', `Are you sure you want to delete "${recipeName}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -204,7 +271,7 @@ export default function Cookbook() {
         style: 'destructive',
         onPress: async () => {
           await deleteUserRecipe(id);
-          loadRecipes();
+          loadData();
         },
       },
     ]);
@@ -241,18 +308,81 @@ export default function Cookbook() {
     rating: 5,
   });
 
-  const handleToggleShoppingList = async (id: number) => {
+  const handleToggleCookbookShoppingList = async (id: number) => {
     const recipe = recipes.find((r) => r.id === id);
     if (recipe) {
       await updateUserRecipe(id, { includeInShoppingList: !recipe.includeInShoppingList });
-      loadRecipes();
+      setRecipes((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, includeInShoppingList: !r.includeInShoppingList } : r
+        )
+      );
     }
   };
 
-  const handleMultiplierChange = async (id: number, multiplier: number) => {
+  const handleCookbookMultiplierChange = async (id: number, multiplier: number) => {
     await updateUserRecipe(id, { multiplier });
     setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, multiplier } : r)));
   };
+
+  const handleCollectionMultiplierChange = async (recipeId: number, multiplier: number) => {
+    await updateCollectionItem(recipeId, { multiplier });
+    setUserCollection((prev) =>
+      prev.map((item) => (item.recipeId === recipeId ? { ...item, multiplier } : item))
+    );
+  };
+
+  const isInCollection = useCallback(
+    (recipeId: number) => userCollection.some((item) => item.recipeId === recipeId),
+    [userCollection]
+  );
+
+  const toggleCollection = useCallback(async (recipeId: number) => {
+    if (toggleInProgress.current.has(recipeId)) return;
+    toggleInProgress.current.add(recipeId);
+    try {
+      const currentCollection = await getUserCollection();
+      if (currentCollection.some((item: any) => item.recipeId === recipeId)) {
+        await removeFromCollection(recipeId);
+      } else {
+        await addToCollection(recipeId);
+      }
+
+      const [collection, allRecipes, fridge] = await Promise.all([
+        getCollectionWithDetails(),
+        getRecipes(),
+        getFridgeWithDetails(),
+      ]);
+      setUserCollection(collection);
+
+      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
+      setFridgeIngredients(fridgeIngs);
+
+      const collectionRecipeIds = collection.map((item) => item.recipeId);
+      const recipesNotInCollection = allRecipes.filter(
+        (recipe: Recipe) => !collectionRecipeIds.includes(recipe.id)
+      );
+
+      const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
+        const haveCount = recipe.ingredients.filter((ing: { name: string }) =>
+          hasIngredient(ing.name, fridgeIngs)
+        ).length;
+        const missingCount = recipe.ingredients.filter(
+          (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngs)
+        ).length;
+        return { recipe, haveCount, missingCount };
+      });
+
+      const sorted = recipesWithMissing
+        .filter((item: any) => item.haveCount > 0)
+        .sort((a: any, b: any) => a.missingCount - b.missingCount)
+        .slice(0, 50);
+
+      setSuggestedRecipes(sorted);
+    } finally {
+      toggleInProgress.current.delete(recipeId);
+    }
+  }, []);
 
   const handleRecipeScanned = (scannedRecipe: {
     name: string;
@@ -266,7 +396,6 @@ export default function Cookbook() {
     category: string;
     mealType: string;
   }) => {
-    // Populate form with scanned data
     setName(scannedRecipe.name);
     setDescription(scannedRecipe.description);
     setIngredients(
@@ -281,7 +410,6 @@ export default function Cookbook() {
     setCuisine(scannedRecipe.cuisine);
     setCategory(scannedRecipe.category);
     setMealType(scannedRecipe.mealType);
-    // Show the form with pre-filled data
     setShowForm(true);
   };
 
@@ -300,8 +428,15 @@ export default function Cookbook() {
     const validIngredients = scannedRecipe.ingredients.filter((i) => i.name.trim());
     const validInstructions = scannedRecipe.instructions.filter((i) => i.trim());
 
-    if (!scannedRecipe.name.trim() || validIngredients.length === 0 || validInstructions.length === 0) {
-      Alert.alert('Error', 'Recipe must have a name, at least one ingredient, and at least one instruction');
+    if (
+      !scannedRecipe.name.trim() ||
+      validIngredients.length === 0 ||
+      validInstructions.length === 0
+    ) {
+      Alert.alert(
+        'Error',
+        'Recipe must have a name, at least one ingredient, and at least one instruction'
+      );
       return;
     }
 
@@ -324,8 +459,250 @@ export default function Cookbook() {
       category: scannedRecipe.category.trim() || undefined,
     });
 
-    loadRecipes();
+    loadData();
   };
+
+  const scrollToRef = (ref: React.RefObject<View | null>) => {
+    setTimeout(() => {
+      ref.current?.measureLayout(
+        scrollViewRef.current as any,
+        (x, y) => {
+          scrollViewRef.current?.scrollTo({ y, animated: true });
+        },
+        () => {}
+      );
+    }, 100);
+  };
+
+  const renderCollectionCard = useCallback(
+    (recipe: Recipe, missingCount: number, collectionItem: any) => (
+      <View
+        key={recipe.id}
+        style={{
+          backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+          borderRadius: 12,
+          padding: 16,
+          marginBottom: 12,
+        }}>
+        <View style={{ marginBottom: 12 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: 4,
+            }}>
+            <Text
+              style={{
+                color: isDark ? '#ffffff' : '#000000',
+                fontSize: 18,
+                fontWeight: '600',
+                flex: 1,
+              }}>
+              {recipe.name}
+            </Text>
+            {collectionItem && (
+              <TouchableOpacity
+                onPress={async () => {
+                  const newValue = collectionItem.includeInShoppingList === false;
+                  await updateCollectionItem(recipe.id, {
+                    includeInShoppingList: newValue,
+                  });
+                  setUserCollection((prev) =>
+                    prev.map((item) =>
+                      item.recipeId === recipe.id
+                        ? { ...item, includeInShoppingList: newValue }
+                        : item
+                    )
+                  );
+                }}
+                accessible={true}
+                accessibilityLabel={`${collectionItem.includeInShoppingList === false ? 'Include' : 'Exclude'} ${recipe.name} in shopping list`}
+                accessibilityRole="button"
+                style={{
+                  backgroundColor:
+                    collectionItem.includeInShoppingList === false
+                      ? isDark
+                        ? '#2c2c2e'
+                        : '#e5e5ea'
+                      : '#34c759',
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  marginLeft: 8,
+                }}>
+                <Ionicons
+                  name={collectionItem.includeInShoppingList === false ? 'cart-outline' : 'cart'}
+                  size={18}
+                  color={
+                    collectionItem.includeInShoppingList === false
+                      ? isDark
+                        ? '#8e8e93'
+                        : '#636366'
+                      : '#ffffff'
+                  }
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+          <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginBottom: 8 }}>
+            {recipe.cuisine}
+            {recipe.mealType ? ` • ${recipe.mealType}` : ''} • {recipe.difficulty} •{' '}
+            {recipe.totalTime} min
+          </Text>
+          <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, marginBottom: 8 }}>
+            {missingCount === 0
+              ? '✓ You have all ingredients!'
+              : `Missing ${missingCount} ingredient${missingCount > 1 ? 's' : ''}`}
+          </Text>
+          {collectionItem && (
+            <View style={{ flexDirection: 'row', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+              {MULTIPLIER_OPTIONS.map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  onPress={() => handleCollectionMultiplierChange(recipe.id, m)}
+                  style={{
+                    backgroundColor:
+                      (collectionItem.multiplier ?? 1) === m
+                        ? '#007aff'
+                        : isDark
+                          ? '#2c2c2e'
+                          : '#e5e5ea',
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 12,
+                  }}>
+                  <Text
+                    style={{
+                      color:
+                        (collectionItem.multiplier ?? 1) === m
+                          ? '#ffffff'
+                          : isDark
+                            ? '#ffffff'
+                            : '#000000',
+                      fontSize: 13,
+                      fontWeight: '600',
+                    }}>
+                    {m}x
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {(() => {
+          const mult = collectionItem?.multiplier ?? 1;
+          return (
+            <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: isDark ? '#ffffff' : '#000000',
+                    fontSize: 14,
+                    fontWeight: '600',
+                    marginBottom: 4,
+                  }}>
+                  Ingredients:
+                </Text>
+                {recipe.ingredients.map(
+                  (ing: { name: string; amount: number; unit: string }, idx: number) => {
+                    const hasIng = hasIngredient(ing.name, fridgeIngredients);
+                    const displayAmount = ing.amount ? ing.amount * mult : 0;
+                    const converted = convertUnit(displayAmount, ing.unit, unitSystem);
+                    return (
+                      <View
+                        key={idx}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                        {!hasIng && (
+                          <Ionicons
+                            name="close"
+                            size={14}
+                            color="#ff3b30"
+                            style={{ marginRight: 4 }}
+                          />
+                        )}
+                        <Text
+                          style={{
+                            color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
+                            fontSize: 13,
+                            fontStyle: hasIng ? 'normal' : 'italic',
+                          }}>
+                          {converted.amount ? `${formatAmount(converted.amount)} ` : ''}
+                          {converted.unit && converted.unit !== 'whole' ? `${converted.unit} ` : ''}
+                          {ing.name}
+                        </Text>
+                      </View>
+                    );
+                  }
+                )}
+              </View>
+              {recipe.images &&
+                recipe.images.length > 0 &&
+                (() => {
+                  const imageSource = getRecipeImage(recipe.images[0]);
+                  return imageSource ? (
+                    <Image
+                      source={imageSource}
+                      style={{ width: 100, height: 100, borderRadius: 8, marginLeft: 12 }}
+                      resizeMode="cover"
+                    />
+                  ) : null;
+                })()}
+            </View>
+          );
+        })()}
+
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => {
+              setSelectedRecipe(recipe);
+              setSelectedRecipeMultiplier(collectionItem?.multiplier ?? 1);
+              setSelectedRecipeSource(
+                collectionItem ? { type: 'collection', id: recipe.id } : null
+              );
+            }}
+            accessible={true}
+            accessibilityLabel={`View ${recipe.name} recipe details`}
+            accessibilityRole="button"
+            style={{
+              flex: 1,
+              backgroundColor: '#007aff',
+              paddingVertical: 10,
+              borderRadius: 8,
+              alignItems: 'center',
+            }}>
+            <Text style={{ color: '#ffffff', fontWeight: '600' }}>View</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => toggleCollection(recipe.id)}
+            accessible={true}
+            accessibilityLabel={
+              isInCollection(recipe.id)
+                ? `Remove ${recipe.name} from collection`
+                : `Add ${recipe.name} to collection`
+            }
+            accessibilityRole="button"
+            style={{
+              flex: 1,
+              backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+              paddingVertical: 10,
+              borderRadius: 8,
+              alignItems: 'center',
+            }}>
+            <Text
+              style={{
+                color: isDark ? '#ffffff' : '#000000',
+                fontWeight: '600',
+              }}>
+              {isInCollection(recipe.id) ? 'Remove' : 'Add'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    ),
+    [isDark, fridgeIngredients, isInCollection, toggleCollection, unitSystem]
+  );
 
   if (loading) {
     return (
@@ -669,413 +1046,706 @@ export default function Cookbook() {
     );
   }
 
+  const collectionItems = userCollection.filter((item) => item.recipe);
+  const cookbookTotalPages = Math.ceil(recipes.length / ITEMS_PER_PAGE);
+  const collectionTotalPages = Math.ceil(collectionItems.length / ITEMS_PER_PAGE);
+  const suggestedTotalPages = Math.ceil(suggestedRecipes.length / ITEMS_PER_PAGE);
+
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff' }}>
       <ScrollView ref={scrollViewRef} contentContainerStyle={{ padding: 16 }}>
-        <View ref={recipesHeaderRef} style={{ marginBottom: 16 }}>
-          <Text
+        {/* My Cookbook Section */}
+        <View ref={cookbookHeaderRef} style={{ marginBottom: 12 }}>
+          <TouchableOpacity
+            onPress={() => setCookbookExpanded(!cookbookExpanded)}
             style={{
-              color: isDark ? '#ffffff' : '#000000',
-              fontSize: 22,
-              fontWeight: '600',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
               marginBottom: 12,
             }}>
-            My Cookbook ({recipes.length})
-          </Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity
-              onPress={async () => {
-                if (isPremium) {
-                  setShowUrlImport(true);
-                } else {
-                  const purchased = await presentPaywallIfNeeded();
-                  if (purchased) setShowUrlImport(true);
-                }
-              }}
-              accessible={true}
-              accessibilityLabel="Import recipe from URL"
-              accessibilityRole="button"
+            <Text
               style={{
-                flex: 1,
-                backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
-                paddingVertical: 10,
-                borderRadius: 8,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
+                color: isDark ? '#ffffff' : '#000000',
+                fontSize: 22,
+                fontWeight: '600',
               }}>
-              <Ionicons name="link" size={18} color={isDark ? '#ffffff' : '#000000'} />
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>URL</Text>
-              {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={async () => {
-                if (isPremium) {
-                  setShowScanner(true);
-                } else {
-                  const purchased = await presentPaywallIfNeeded();
-                  if (purchased) setShowScanner(true);
-                }
-              }}
-              accessible={true}
-              accessibilityLabel="Scan a recipe with camera"
-              accessibilityRole="button"
-              style={{
-                flex: 1,
-                backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
-                paddingVertical: 10,
-                borderRadius: 8,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-              }}>
-              <Ionicons name="camera" size={18} color={isDark ? '#ffffff' : '#000000'} />
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>Scan</Text>
-              {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowForm(true)}
-              accessible={true}
-              accessibilityLabel="Add recipe manually"
-              accessibilityRole="button"
-              style={{
-                flex: 1,
-                backgroundColor: '#007aff',
-                paddingVertical: 10,
-                borderRadius: 8,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-              }}>
-              <Ionicons name="add" size={18} color="#ffffff" />
-              <Text style={{ color: '#ffffff', fontWeight: '600' }}>Add</Text>
-            </TouchableOpacity>
-          </View>
+              My Cookbook ({recipes.length})
+            </Text>
+            <Ionicons
+              name={cookbookExpanded ? 'chevron-up' : 'chevron-down'}
+              size={24}
+              color={isDark ? '#ffffff' : '#000000'}
+            />
+          </TouchableOpacity>
+          {cookbookExpanded && (
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (isPremium) {
+                    setShowUrlImport(true);
+                  } else {
+                    const purchased = await presentPaywallIfNeeded();
+                    if (purchased) setShowUrlImport(true);
+                  }
+                }}
+                accessible={true}
+                accessibilityLabel="Import recipe from URL"
+                accessibilityRole="button"
+                style={{
+                  flex: 1,
+                  backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}>
+                <Ionicons name="link" size={18} color={isDark ? '#ffffff' : '#000000'} />
+                <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>
+                  URL
+                </Text>
+                {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  if (isPremium) {
+                    setShowScanner(true);
+                  } else {
+                    const purchased = await presentPaywallIfNeeded();
+                    if (purchased) setShowScanner(true);
+                  }
+                }}
+                accessible={true}
+                accessibilityLabel="Scan a recipe with camera"
+                accessibilityRole="button"
+                style={{
+                  flex: 1,
+                  backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}>
+                <Ionicons name="camera" size={18} color={isDark ? '#ffffff' : '#000000'} />
+                <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>
+                  Scan
+                </Text>
+                {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowForm(true)}
+                accessible={true}
+                accessibilityLabel="Add recipe manually"
+                accessibilityRole="button"
+                style={{
+                  flex: 1,
+                  backgroundColor: '#007aff',
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}>
+                <Ionicons name="add" size={18} color="#ffffff" />
+                <Text style={{ color: '#ffffff', fontWeight: '600' }}>Add</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
-        {recipes.length === 0 ? (
-          <View style={{ alignItems: 'center', marginVertical: 60 }}>
-            <Ionicons name="book-outline" size={64} color={isDark ? '#3a3a3c' : '#d1d1d6'} />
-            <Text
-              style={{
-                color: isDark ? '#8e8e93' : '#636366',
-                textAlign: 'center',
-                marginTop: 16,
-                fontSize: 16,
-              }}>
-              No recipes yet
-            </Text>
-            <Text
-              style={{
-                color: isDark ? '#8e8e93' : '#636366',
-                textAlign: 'center',
-                marginTop: 4,
-                fontSize: 14,
-              }}>
-              Add your first recipe to get started!
-            </Text>
-          </View>
-        ) : (
+        {cookbookExpanded && (
           <>
-            {recipes
-              .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
-              .map((recipe) => {
-              const recipeObj = convertToRecipe(recipe);
-              const missingCount = recipeObj.ingredients.filter(
-                (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
-              ).length;
-              return (
-                <View
-                  key={recipe.id}
+            {recipes.length === 0 ? (
+              <View style={{ alignItems: 'center', marginVertical: 40 }}>
+                <Ionicons name="book-outline" size={64} color={isDark ? '#3a3a3c' : '#d1d1d6'} />
+                <Text
                   style={{
-                    backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                    borderRadius: 12,
-                    padding: 16,
-                    marginBottom: 12,
+                    color: isDark ? '#8e8e93' : '#636366',
+                    textAlign: 'center',
+                    marginTop: 16,
+                    fontSize: 16,
                   }}>
-                  <View style={{ marginBottom: 12 }}>
-                    <View
+                  No recipes in your cookbook yet
+                </Text>
+              </View>
+            ) : (
+              <>
+                {recipes
+                  .slice((cookbookPage - 1) * ITEMS_PER_PAGE, cookbookPage * ITEMS_PER_PAGE)
+                  .map((recipe) => {
+                    const recipeObj = convertToRecipe(recipe);
+                    const missingCount = recipeObj.ingredients.filter(
+                      (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
+                    ).length;
+                    return (
+                      <View
+                        key={recipe.id}
+                        style={{
+                          backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                          borderRadius: 12,
+                          padding: 16,
+                          marginBottom: 12,
+                        }}>
+                        <View style={{ marginBottom: 12 }}>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              justifyContent: 'space-between',
+                              alignItems: 'flex-start',
+                              marginBottom: 4,
+                            }}>
+                            <Text
+                              style={{
+                                color: isDark ? '#ffffff' : '#000000',
+                                fontSize: 18,
+                                fontWeight: '600',
+                                flex: 1,
+                              }}>
+                              {recipeObj.name}
+                            </Text>
+                            <TouchableOpacity
+                              onPress={() => handleToggleCookbookShoppingList(recipe.id)}
+                              accessible={true}
+                              accessibilityLabel={`${recipe.includeInShoppingList === false ? 'Include' : 'Exclude'} ${recipeObj.name} in shopping list`}
+                              accessibilityRole="button"
+                              style={{
+                                backgroundColor:
+                                  recipe.includeInShoppingList === false
+                                    ? isDark
+                                      ? '#2c2c2e'
+                                      : '#e5e5ea'
+                                    : '#34c759',
+                                paddingHorizontal: 10,
+                                paddingVertical: 6,
+                                borderRadius: 6,
+                                marginLeft: 8,
+                              }}>
+                              <Ionicons
+                                name={
+                                  recipe.includeInShoppingList === false ? 'cart-outline' : 'cart'
+                                }
+                                size={18}
+                                color={
+                                  recipe.includeInShoppingList === false
+                                    ? isDark
+                                      ? '#8e8e93'
+                                      : '#636366'
+                                    : '#ffffff'
+                                }
+                              />
+                            </TouchableOpacity>
+                          </View>
+                          <Text
+                            style={{
+                              color: isDark ? '#8e8e93' : '#636366',
+                              fontSize: 14,
+                              marginBottom: 8,
+                            }}>
+                            {recipeObj.cuisine} • {recipeObj.difficulty} • {recipeObj.totalTime} min
+                          </Text>
+                          <Text
+                            style={{
+                              color: isDark ? '#8e8e93' : '#636366',
+                              fontSize: 14,
+                              marginBottom: 8,
+                            }}>
+                            {missingCount === 0
+                              ? '✓ You have all ingredients!'
+                              : `Missing ${missingCount} ingredient${missingCount > 1 ? 's' : ''}`}
+                          </Text>
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              gap: 4,
+                              marginBottom: 8,
+                              flexWrap: 'wrap',
+                            }}>
+                            {MULTIPLIER_OPTIONS.map((m) => (
+                              <TouchableOpacity
+                                key={m}
+                                onPress={() => handleCookbookMultiplierChange(recipe.id, m)}
+                                style={{
+                                  backgroundColor:
+                                    (recipe.multiplier ?? 1) === m
+                                      ? '#007aff'
+                                      : isDark
+                                        ? '#2c2c2e'
+                                        : '#e5e5ea',
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 4,
+                                  borderRadius: 12,
+                                }}>
+                                <Text
+                                  style={{
+                                    color:
+                                      (recipe.multiplier ?? 1) === m
+                                        ? '#ffffff'
+                                        : isDark
+                                          ? '#ffffff'
+                                          : '#000000',
+                                    fontSize: 13,
+                                    fontWeight: '600',
+                                  }}>
+                                  {m}x
+                                </Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+
+                        {(() => {
+                          const mult = recipe.multiplier ?? 1;
+                          return (
+                            <View style={{ marginBottom: 12 }}>
+                              <Text
+                                style={{
+                                  color: isDark ? '#ffffff' : '#000000',
+                                  fontSize: 14,
+                                  fontWeight: '600',
+                                  marginBottom: 4,
+                                }}>
+                                Ingredients:
+                              </Text>
+                              {recipeObj.ingredients.map(
+                                (
+                                  ing: {
+                                    name: string;
+                                    amount: number;
+                                    unit: string;
+                                    preparation?: string | null;
+                                  },
+                                  idx: number
+                                ) => {
+                                  const hasIng = hasIngredient(ing.name, fridgeIngredients);
+                                  const displayAmount = ing.amount ? ing.amount * mult : 0;
+                                  const converted = convertUnit(
+                                    displayAmount,
+                                    ing.unit,
+                                    unitSystem
+                                  );
+                                  return (
+                                    <View
+                                      key={idx}
+                                      style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        marginBottom: 2,
+                                      }}>
+                                      {!hasIng && (
+                                        <Ionicons
+                                          name="close"
+                                          size={14}
+                                          color="#ff3b30"
+                                          style={{ marginRight: 4 }}
+                                        />
+                                      )}
+                                      <Text
+                                        style={{
+                                          color: hasIng
+                                            ? isDark
+                                              ? '#ffffff'
+                                              : '#000000'
+                                            : '#ff3b30',
+                                          fontSize: 13,
+                                          fontStyle: hasIng ? 'normal' : 'italic',
+                                        }}>
+                                        {converted.amount
+                                          ? `${formatAmount(converted.amount)} `
+                                          : ''}
+                                        {converted.unit && converted.unit !== 'whole'
+                                          ? `${converted.unit} `
+                                          : ''}
+                                        {ing.name}
+                                        {ing.preparation && `, ${ing.preparation}`}
+                                      </Text>
+                                    </View>
+                                  );
+                                }
+                              )}
+                            </View>
+                          );
+                        })()}
+
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <TouchableOpacity
+                            onPress={() => {
+                              setSelectedRecipe(recipeObj);
+                              setSelectedRecipeMultiplier(recipe.multiplier ?? 1);
+                              setSelectedRecipeSource({ type: 'cookbook', id: recipe.id });
+                            }}
+                            accessible={true}
+                            accessibilityLabel={`View ${recipeObj.name} recipe details`}
+                            accessibilityRole="button"
+                            style={{
+                              flex: 1,
+                              backgroundColor: '#007aff',
+                              paddingVertical: 10,
+                              borderRadius: 8,
+                              alignItems: 'center',
+                            }}>
+                            <Text style={{ color: '#ffffff', fontWeight: '600' }}>View</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleDeleteCookbookRecipe(recipe.id, recipe.name)}
+                            accessible={true}
+                            accessibilityLabel={`Delete ${recipeObj.name}`}
+                            accessibilityRole="button"
+                            style={{
+                              flex: 1,
+                              backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                              paddingVertical: 10,
+                              borderRadius: 8,
+                              alignItems: 'center',
+                            }}>
+                            <Text style={{ color: '#ff3b30', fontWeight: '600' }}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    );
+                  })}
+                {cookbookTotalPages > 1 && (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: 12,
+                      marginTop: 16,
+                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCookbookPage((p) => Math.max(1, p - 1));
+                        scrollToRef(cookbookHeaderRef);
+                      }}
+                      disabled={cookbookPage === 1}
                       style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        marginBottom: 4,
+                        backgroundColor:
+                          cookbookPage === 1 ? (isDark ? '#1c1c1e' : '#f2f2f7') : '#007aff',
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        opacity: cookbookPage === 1 ? 0.5 : 1,
                       }}>
                       <Text
                         style={{
-                          color: isDark ? '#ffffff' : '#000000',
-                          fontSize: 18,
+                          color: cookbookPage === 1 ? (isDark ? '#8e8e93' : '#636366') : '#ffffff',
                           fontWeight: '600',
-                          flex: 1,
                         }}>
-                        {recipeObj.name}
+                        Previous
                       </Text>
-                      <TouchableOpacity
-                        onPress={() => handleToggleShoppingList(recipe.id)}
-                        accessible={true}
-                        accessibilityLabel={`${recipe.includeInShoppingList === false ? 'Include' : 'Exclude'} ${recipeObj.name} in shopping list`}
-                        accessibilityRole="button"
+                    </TouchableOpacity>
+                    <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                      {cookbookPage} / {cookbookTotalPages}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCookbookPage((p) => Math.min(cookbookTotalPages, p + 1));
+                        scrollToRef(cookbookHeaderRef);
+                      }}
+                      disabled={cookbookPage === cookbookTotalPages}
+                      style={{
+                        backgroundColor:
+                          cookbookPage === cookbookTotalPages
+                            ? isDark
+                              ? '#1c1c1e'
+                              : '#f2f2f7'
+                            : '#007aff',
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        opacity: cookbookPage === cookbookTotalPages ? 0.5 : 1,
+                      }}>
+                      <Text
                         style={{
-                          backgroundColor:
-                            recipe.includeInShoppingList === false
-                              ? isDark
-                                ? '#2c2c2e'
-                                : '#e5e5ea'
-                              : '#34c759',
-                          paddingHorizontal: 10,
-                          paddingVertical: 6,
-                          borderRadius: 6,
-                          marginLeft: 8,
-                        }}>
-                        <Ionicons
-                          name={recipe.includeInShoppingList === false ? 'cart-outline' : 'cart'}
-                          size={18}
-                          color={
-                            recipe.includeInShoppingList === false
+                          color:
+                            cookbookPage === cookbookTotalPages
                               ? isDark
                                 ? '#8e8e93'
                                 : '#636366'
-                              : '#ffffff'
-                          }
-                        />
-                      </TouchableOpacity>
-                    </View>
-                    <Text
-                      style={{
-                        color: isDark ? '#8e8e93' : '#636366',
-                        fontSize: 14,
-                        marginBottom: 8,
-                      }}>
-                      {recipeObj.cuisine} • {recipeObj.difficulty} • {recipeObj.totalTime} min
-                    </Text>
-                    <Text
-                      style={{
-                        color: isDark ? '#8e8e93' : '#636366',
-                        fontSize: 14,
-                        marginBottom: 8,
-                      }}>
-                      {missingCount === 0
-                        ? '✓ You have all ingredients!'
-                        : `Missing ${missingCount} ingredient${missingCount > 1 ? 's' : ''}`}
-                    </Text>
-                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
-                      {MULTIPLIER_OPTIONS.map((m) => (
-                        <TouchableOpacity
-                          key={m}
-                          onPress={() => handleMultiplierChange(recipe.id, m)}
-                          style={{
-                            backgroundColor: (recipe.multiplier ?? 1) === m ? '#007aff' : isDark ? '#2c2c2e' : '#e5e5ea',
-                            paddingHorizontal: 8,
-                            paddingVertical: 4,
-                            borderRadius: 12,
-                          }}>
-                          <Text style={{
-                            color: (recipe.multiplier ?? 1) === m ? '#ffffff' : isDark ? '#ffffff' : '#000000',
-                            fontSize: 13,
-                            fontWeight: '600',
-                          }}>
-                            {m}x
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-
-                  {(() => {
-                    const mult = recipe.multiplier ?? 1;
-                    return (
-                  <View style={{ marginBottom: 12 }}>
-                    <Text
-                      style={{
-                        color: isDark ? '#ffffff' : '#000000',
-                        fontSize: 14,
-                        fontWeight: '600',
-                        marginBottom: 4,
-                      }}>
-                      Ingredients:
-                    </Text>
-                    {recipeObj.ingredients.map(
-                      (
-                        ing: { name: string; amount: number; unit: string; preparation?: string | null },
-                        idx: number
-                      ) => {
-                        const hasIng = hasIngredient(ing.name, fridgeIngredients);
-                        const displayAmount = ing.amount ? ing.amount * mult : 0;
-                        const converted = convertUnit(displayAmount, ing.unit, unitSystem);
-                        return (
-                          <View
-                            key={idx}
-                            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                            {!hasIng && (
-                              <Ionicons
-                                name="close"
-                                size={14}
-                                color="#ff3b30"
-                                style={{ marginRight: 4 }}
-                              />
-                            )}
-                            <Text
-                              style={{
-                                color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
-                                fontSize: 13,
-                                fontStyle: hasIng ? 'normal' : 'italic',
-                              }}>
-                              {converted.amount ? `${formatAmount(converted.amount)} ` : ''}{converted.unit && converted.unit !== 'whole' ? `${converted.unit} ` : ''}{ing.name}
-                              {ing.preparation && `, ${ing.preparation}`}
-                            </Text>
-                          </View>
-                        );
-                      }
-                    )}
-                  </View>
-                    );
-                  })()}
-
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setSelectedRecipe(recipeObj);
-                        setSelectedRecipeMultiplier(recipe.multiplier ?? 1);
-                        setSelectedRecipeId(recipe.id);
-                      }}
-                      accessible={true}
-                      accessibilityLabel={`View ${recipeObj.name} recipe details`}
-                      accessibilityRole="button"
-                      style={{
-                        flex: 1,
-                        backgroundColor: '#007aff',
-                        paddingVertical: 10,
-                        borderRadius: 8,
-                        alignItems: 'center',
-                      }}>
-                      <Text style={{ color: '#ffffff', fontWeight: '600' }}>View</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleDelete(recipe.id, recipe.name)}
-                      accessible={true}
-                      accessibilityLabel={`Delete ${recipeObj.name}`}
-                      accessibilityRole="button"
-                      style={{
-                        flex: 1,
-                        backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
-                        paddingVertical: 10,
-                        borderRadius: 8,
-                        alignItems: 'center',
-                      }}>
-                      <Text style={{ color: '#ff3b30', fontWeight: '600' }}>Delete</Text>
+                              : '#ffffff',
+                          fontWeight: '600',
+                        }}>
+                        Next
+                      </Text>
                     </TouchableOpacity>
                   </View>
-                </View>
-              );
-            })}
-            {recipes.length > ITEMS_PER_PAGE && (
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: 12,
-                  marginTop: 16,
-                }}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setCurrentPage((p) => Math.max(1, p - 1));
-                    setTimeout(() => {
-                      recipesHeaderRef.current?.measureLayout(
-                        scrollViewRef.current as any,
-                        (x, y) => {
-                          scrollViewRef.current?.scrollTo({ y, animated: true });
-                        },
-                        () => {}
-                      );
-                    }, 100);
-                  }}
-                  disabled={currentPage === 1}
-                  style={{
-                    backgroundColor:
-                      currentPage === 1 ? (isDark ? '#1c1c1e' : '#f2f2f7') : '#007aff',
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 8,
-                    opacity: currentPage === 1 ? 0.5 : 1,
-                  }}>
-                  <Text
-                    style={{
-                      color: currentPage === 1 ? (isDark ? '#8e8e93' : '#636366') : '#ffffff',
-                      fontWeight: '600',
-                    }}>
-                    Previous
-                  </Text>
-                </TouchableOpacity>
-                <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
-                  {currentPage} / {Math.ceil(recipes.length / ITEMS_PER_PAGE)}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setCurrentPage((p) => Math.min(Math.ceil(recipes.length / ITEMS_PER_PAGE), p + 1));
-                    setTimeout(() => {
-                      recipesHeaderRef.current?.measureLayout(
-                        scrollViewRef.current as any,
-                        (x, y) => {
-                          scrollViewRef.current?.scrollTo({ y, animated: true });
-                        },
-                        () => {}
-                      );
-                    }, 100);
-                  }}
-                  disabled={currentPage === Math.ceil(recipes.length / ITEMS_PER_PAGE)}
-                  style={{
-                    backgroundColor:
-                      currentPage === Math.ceil(recipes.length / ITEMS_PER_PAGE)
-                        ? isDark
-                          ? '#1c1c1e'
-                          : '#f2f2f7'
-                        : '#007aff',
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 8,
-                    opacity: currentPage === Math.ceil(recipes.length / ITEMS_PER_PAGE) ? 0.5 : 1,
-                  }}>
-                  <Text
-                    style={{
-                      color:
-                        currentPage === Math.ceil(recipes.length / ITEMS_PER_PAGE)
-                          ? isDark
-                            ? '#8e8e93'
-                            : '#636366'
-                          : '#ffffff',
-                      fontWeight: '600',
-                    }}>
-                    Next
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                )}
+              </>
             )}
           </>
         )}
+
+        {/* My Collection Section */}
+        <View ref={collectionHeaderRef}>
+          <TouchableOpacity
+            onPress={() => setCollectionExpanded(!collectionExpanded)}
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 24,
+              marginBottom: 12,
+            }}>
+            <Text
+              style={{
+                color: isDark ? '#ffffff' : '#000000',
+                fontSize: 22,
+                fontWeight: '600',
+              }}>
+              My Collection ({collectionItems.length})
+            </Text>
+            <Ionicons
+              name={collectionExpanded ? 'chevron-up' : 'chevron-down'}
+              size={24}
+              color={isDark ? '#ffffff' : '#000000'}
+            />
+          </TouchableOpacity>
+        </View>
+        {collectionExpanded &&
+          (collectionItems.length === 0 ? (
+            <View style={{ alignItems: 'center', marginVertical: 40 }}>
+              <Ionicons name="bookmark-outline" size={64} color={isDark ? '#3a3a3c' : '#d1d1d6'} />
+              <Text
+                style={{
+                  color: isDark ? '#8e8e93' : '#636366',
+                  textAlign: 'center',
+                  marginTop: 16,
+                  fontSize: 16,
+                }}>
+                No recipes in your collection yet
+              </Text>
+            </View>
+          ) : (
+            <>
+              {collectionItems
+                .slice((collectionPage - 1) * ITEMS_PER_PAGE, collectionPage * ITEMS_PER_PAGE)
+                .map((item) => {
+                  const recipe = item.recipe;
+                  if (!recipe) return null;
+                  const missingCount = recipe.ingredients.filter(
+                    (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
+                  ).length;
+                  return renderCollectionCard(recipe, missingCount, item);
+                })}
+              {collectionTotalPages > 1 && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 12,
+                    marginTop: 16,
+                  }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setCollectionPage((p) => Math.max(1, p - 1));
+                      scrollToRef(collectionHeaderRef);
+                    }}
+                    disabled={collectionPage === 1}
+                    style={{
+                      backgroundColor:
+                        collectionPage === 1 ? (isDark ? '#1c1c1e' : '#f2f2f7') : '#007aff',
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      opacity: collectionPage === 1 ? 0.5 : 1,
+                    }}>
+                    <Text
+                      style={{
+                        color: collectionPage === 1 ? (isDark ? '#8e8e93' : '#636366') : '#ffffff',
+                        fontWeight: '600',
+                      }}>
+                      Previous
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                    {collectionPage} / {collectionTotalPages}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setCollectionPage((p) => Math.min(collectionTotalPages, p + 1));
+                      scrollToRef(collectionHeaderRef);
+                    }}
+                    disabled={collectionPage === collectionTotalPages}
+                    style={{
+                      backgroundColor:
+                        collectionPage === collectionTotalPages
+                          ? isDark
+                            ? '#1c1c1e'
+                            : '#f2f2f7'
+                          : '#007aff',
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      opacity: collectionPage === collectionTotalPages ? 0.5 : 1,
+                    }}>
+                    <Text
+                      style={{
+                        color:
+                          collectionPage === collectionTotalPages
+                            ? isDark
+                              ? '#8e8e93'
+                              : '#636366'
+                            : '#ffffff',
+                        fontWeight: '600',
+                      }}>
+                      Next
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
+          ))}
+
+        {/* Suggested Recipes Section */}
+        <View ref={suggestedHeaderRef}>
+          <TouchableOpacity
+            onPress={() => setSuggestedExpanded(!suggestedExpanded)}
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: 24,
+              marginBottom: 12,
+            }}>
+            <Text
+              style={{
+                color: isDark ? '#ffffff' : '#000000',
+                fontSize: 22,
+                fontWeight: '600',
+              }}>
+              Suggested Recipes ({suggestedRecipes.length})
+            </Text>
+            <Ionicons
+              name={suggestedExpanded ? 'chevron-up' : 'chevron-down'}
+              size={24}
+              color={isDark ? '#ffffff' : '#000000'}
+            />
+          </TouchableOpacity>
+        </View>
+        {suggestedExpanded &&
+          (suggestedRecipes.length === 0 ? (
+            <View style={{ alignItems: 'center', marginVertical: 40 }}>
+              <Ionicons name="bulb-outline" size={64} color={isDark ? '#3a3a3c' : '#d1d1d6'} />
+              <Text
+                style={{
+                  color: isDark ? '#8e8e93' : '#636366',
+                  textAlign: 'center',
+                  marginTop: 16,
+                  fontSize: 16,
+                }}>
+                Add ingredients to your Fridge
+              </Text>
+            </View>
+          ) : (
+            <>
+              {suggestedRecipes
+                .slice((suggestedPage - 1) * ITEMS_PER_PAGE, suggestedPage * ITEMS_PER_PAGE)
+                .map((item) => renderCollectionCard(item.recipe, item.missingCount, null))}
+              {suggestedTotalPages > 1 && (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 12,
+                    marginTop: 16,
+                  }}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSuggestedPage((p) => Math.max(1, p - 1));
+                      scrollToRef(suggestedHeaderRef);
+                    }}
+                    disabled={suggestedPage === 1}
+                    style={{
+                      backgroundColor:
+                        suggestedPage === 1 ? (isDark ? '#1c1c1e' : '#f2f2f7') : '#007aff',
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      opacity: suggestedPage === 1 ? 0.5 : 1,
+                    }}>
+                    <Text
+                      style={{
+                        color: suggestedPage === 1 ? (isDark ? '#8e8e93' : '#636366') : '#ffffff',
+                        fontWeight: '600',
+                      }}>
+                      Previous
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={{ color: isDark ? '#ffffff' : '#000000' }}>
+                    {suggestedPage} / {suggestedTotalPages}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSuggestedPage((p) => Math.min(suggestedTotalPages, p + 1));
+                      scrollToRef(suggestedHeaderRef);
+                    }}
+                    disabled={suggestedPage === suggestedTotalPages}
+                    style={{
+                      backgroundColor:
+                        suggestedPage === suggestedTotalPages
+                          ? isDark
+                            ? '#1c1c1e'
+                            : '#f2f2f7'
+                          : '#007aff',
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 8,
+                      opacity: suggestedPage === suggestedTotalPages ? 0.5 : 1,
+                    }}>
+                    <Text
+                      style={{
+                        color:
+                          suggestedPage === suggestedTotalPages
+                            ? isDark
+                              ? '#8e8e93'
+                              : '#636366'
+                            : '#ffffff',
+                        fontWeight: '600',
+                      }}>
+                      Next
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </>
+          ))}
       </ScrollView>
 
       <RecipeDetailModal
         visible={!!selectedRecipe}
         recipe={selectedRecipe}
-        isInCollection={false}
+        isInCollection={selectedRecipe ? isInCollection(selectedRecipe.id) : false}
         onClose={() => {
           setSelectedRecipe(null);
-          setSelectedRecipeId(null);
+          setSelectedRecipeSource(null);
         }}
         onToggleCollection={() => {
-          if (selectedRecipe) handleDelete(selectedRecipe.id, selectedRecipe.name);
+          if (selectedRecipe) {
+            if (selectedRecipeSource?.type === 'cookbook') {
+              handleDeleteCookbookRecipe(selectedRecipe.id, selectedRecipe.name);
+            } else {
+              toggleCollection(selectedRecipe.id);
+            }
+          }
         }}
-        hideCollectionButton={true}
+        hideCollectionButton={selectedRecipeSource?.type === 'cookbook'}
         multiplier={selectedRecipeMultiplier}
         unitSystem={unitSystem}
         onMultiplierChange={(m) => {
           setSelectedRecipeMultiplier(m);
-          if (selectedRecipeId) {
-            handleMultiplierChange(selectedRecipeId, m);
+          if (selectedRecipeSource) {
+            if (selectedRecipeSource.type === 'cookbook') {
+              handleCookbookMultiplierChange(selectedRecipeSource.id, m);
+            } else {
+              handleCollectionMultiplierChange(selectedRecipeSource.id, m);
+            }
           }
         }}
       />
