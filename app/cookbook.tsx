@@ -156,7 +156,7 @@ export default function Cookbook() {
   const [servings, setServings] = useState('');
   const [cuisine, setCuisine] = useState('');
   const [category, setCategory] = useState('');
-  const [mealType, setMealType] = useState('');
+  const [, setMealType] = useState('');
 
   const loadData = useCallback(async () => {
     setLoading(true);

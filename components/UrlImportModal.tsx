@@ -91,14 +91,14 @@ export default function UrlImportModal({
   const getIngredientsWithAlternatives = (recipe: FormattedRecipe) => {
     return recipe.ingredients
       .map((ing, index) => ({ ...ing, index }))
-      .filter((ing) => ing.alternatives && ing.alternatives.length > 0) as Array<{
+      .filter((ing) => ing.alternatives && ing.alternatives.length > 0) as {
         index: number;
         name: string;
         amount: string;
         unit: string;
         preparation?: string;
         alternatives: string[];
-      }>;
+      }[];
   };
 
   const handleAlternativesChosen = (choices: { index: number; chosenName: string }[]) => {

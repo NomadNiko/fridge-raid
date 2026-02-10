@@ -13,7 +13,9 @@
       "Bash(node:*)",
       "Bash(dir:*)",
       "Bash(ls -la \"c:\\\\Users\\\\admin\\\\scraping\\\\fridge-raid-scraper\\\\types\"\" && echo \"---\" && ls -la \"c:Usersadminscrapingfridge-raid-scraperlib\"\")",
-      "WebFetch(domain:www.revenuecat.com)"
+      "WebFetch(domain:www.revenuecat.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:unpkg.com)"
     ]
   }
 }

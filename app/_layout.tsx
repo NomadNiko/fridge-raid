@@ -1,28 +1,38 @@
 import { Tabs } from 'expo-router';
-import { Appearance } from 'react-native';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { initializeDatabase } from '../lib/storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { RevenueCatProvider } from '../lib/revenueCat';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import OnboardingModal from '../components/OnboardingModal';
 
 export default function TabLayout() {
-  const [colorScheme, setColorScheme] = useState(Appearance.getColorScheme());
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
     initializeDatabase().then(() => {});
 
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      setColorScheme(colorScheme);
+    AsyncStorage.getItem('walkthroughSeen').then((val) => {
+      if (val !== 'true') setShowOnboarding(true);
+      setOnboardingChecked(true);
     });
-    return () => subscription.remove();
   }, []);
 
-  const isDark = colorScheme === 'dark';
+  const handleOnboardingComplete = async () => {
+    await AsyncStorage.setItem('walkthroughSeen', 'true');
+    setShowOnboarding(false);
+  };
+
+  const isDark = true;
 
   return (
     <RevenueCatProvider>
       <StatusBar style={isDark ? 'light' : 'dark'} />
+      {onboardingChecked && (
+        <OnboardingModal visible={showOnboarding} onComplete={handleOnboardingComplete} />
+      )}
       <Tabs
         screenOptions={{
           headerShown: true,

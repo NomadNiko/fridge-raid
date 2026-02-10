@@ -98,6 +98,7 @@ export default function Settings() {
               await AsyncStorage.setItem('userCollection', JSON.stringify([]));
               await AsyncStorage.setItem('userRecipes', JSON.stringify([]));
               await AsyncStorage.setItem('customIngredients', JSON.stringify([]));
+              await AsyncStorage.removeItem('walkthroughSeen');
               setFridgeCount(0);
               setCollectionCount(0);
               setCustomRecipesCount(0);

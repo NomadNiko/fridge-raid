@@ -27,19 +27,22 @@ export default {
     ],
     newArchEnabled: true,
     orientation: 'portrait',
-    icon: './assets/icon.png',
-    userInterfaceStyle: 'automatic',
+    userInterfaceStyle: 'dark',
     scheme: 'fridge-raid',
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
-      backgroundColor: '#ffffff',
+      backgroundColor: '#000000',
     },
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
       newArchEnabled: true,
       bundleIdentifier: 'com.devnomad.fridgeraid',
+      icon: {
+        dark: './assets/icon-dark.png',
+        light: './assets/icon-light.png',
+      },
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription:
