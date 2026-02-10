@@ -15,6 +15,7 @@ import ImageViewer from './ImageViewer';
 import { getRecipeImage } from '../lib/images';
 import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
+import { UnitSystem, convertUnit } from '../lib/unitConversion';
 
 const MULTIPLIER_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3];
 
@@ -39,6 +40,8 @@ type RecipeDetailModalProps = {
   // Multiplier props (optional)
   multiplier?: number;
   onMultiplierChange?: (m: number) => void;
+  // Unit system prop (optional)
+  unitSystem?: UnitSystem;
 };
 
 export default function RecipeDetailModal({
@@ -54,6 +57,7 @@ export default function RecipeDetailModal({
   hasNext = false,
   multiplier = 1,
   onMultiplierChange,
+  unitSystem = 'original',
 }: RecipeDetailModalProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -248,6 +252,7 @@ export default function RecipeDetailModal({
             ) => {
               const hasIng = hasIngredient(ing.name, fridgeIngredients);
               const displayAmount = ing.amount ? ing.amount * multiplier : 0;
+              const converted = convertUnit(displayAmount, ing.unit, unitSystem);
               return (
                 <View
                   key={idx}
@@ -264,8 +269,8 @@ export default function RecipeDetailModal({
                       flex: 1,
                       fontStyle: hasIng ? 'normal' : 'italic',
                     }}>
-                    {displayAmount ? `${formatAmount(displayAmount)} ` : ''}
-                    {ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}
+                    {converted.amount ? `${formatAmount(converted.amount)} ` : ''}
+                    {converted.unit && converted.unit !== 'whole' ? `${converted.unit} ` : ''}
                     {ing.name}
                     {ing.preparation && `, ${ing.preparation}`}
                     {ing.optional && ' (optional)'}

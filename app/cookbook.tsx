@@ -27,6 +27,7 @@ import UrlImportModal from '../components/UrlImportModal';
 import { Recipe } from '../types';
 import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
+import { UnitSystem, getUnitSystem, convertUnit } from '../lib/unitConversion';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -96,6 +97,7 @@ export default function Cookbook() {
   const [recipes, setRecipes] = useState<UserRecipe[]>([]);
   const [fridgeIngredients, setFridgeIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unitSystem, setUnitSystemState] = useState<UnitSystem>('original');
   const [showForm, setShowForm] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [showUrlImport, setShowUrlImport] = useState(false);
@@ -123,10 +125,11 @@ export default function Cookbook() {
   const loadRecipes = useCallback(async () => {
     setLoading(true);
     setCurrentPage(1);
-    const [userRecipes, fridge] = await Promise.all([getUserRecipes(), getFridgeWithDetails()]);
+    const [userRecipes, fridge, savedUnitSystem] = await Promise.all([getUserRecipes(), getFridgeWithDetails(), getUnitSystem()]);
     setRecipes(userRecipes);
     const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
     setFridgeIngredients(fridgeIngs);
+    setUnitSystemState(savedUnitSystem);
     setLoading(false);
   }, []);
 
@@ -883,6 +886,7 @@ export default function Cookbook() {
                       ) => {
                         const hasIng = hasIngredient(ing.name, fridgeIngredients);
                         const displayAmount = ing.amount ? ing.amount * mult : 0;
+                        const converted = convertUnit(displayAmount, ing.unit, unitSystem);
                         return (
                           <View
                             key={idx}
@@ -901,7 +905,7 @@ export default function Cookbook() {
                                 fontSize: 13,
                                 fontStyle: hasIng ? 'normal' : 'italic',
                               }}>
-                              {displayAmount ? `${formatAmount(displayAmount)} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
+                              {converted.amount ? `${formatAmount(converted.amount)} ` : ''}{converted.unit && converted.unit !== 'whole' ? `${converted.unit} ` : ''}{ing.name}
                               {ing.preparation && `, ${ing.preparation}`}
                             </Text>
                           </View>
@@ -1049,6 +1053,7 @@ export default function Cookbook() {
         }}
         hideCollectionButton={true}
         multiplier={selectedRecipeMultiplier}
+        unitSystem={unitSystem}
         onMultiplierChange={(m) => {
           setSelectedRecipeMultiplier(m);
           if (selectedRecipeId) {

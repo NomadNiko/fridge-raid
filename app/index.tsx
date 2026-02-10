@@ -19,6 +19,7 @@ import RecipeCard from '../components/RecipeCard';
 import RecipeDetailModal from '../components/RecipeDetailModal';
 import { Recipe } from '../types';
 import { Ionicons } from '@expo/vector-icons';
+import { UnitSystem, getUnitSystem } from '../lib/unitConversion';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -34,14 +35,16 @@ export default function Search() {
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
   const [selectedMealType, setSelectedMealType] = useState<string | null>(null);
   const [filtersVisible, setFiltersVisible] = useState(false);
+  const [unitSystem, setUnitSystemState] = useState<UnitSystem>('original');
   const toggleInProgress = useRef<Set<number>>(new Set());
   const flatListRef = useRef<FlatList>(null);
 
   const loadData = useCallback(async () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
-    const [recipesData, collectionData] = await Promise.all([getRecipes(), getUserCollection()]);
+    const [recipesData, collectionData, savedUnitSystem] = await Promise.all([getRecipes(), getUserCollection(), getUnitSystem()]);
     setRecipes(recipesData);
     setUserCollection(collectionData);
+    setUnitSystemState(savedUnitSystem);
     setLoading(false);
   }, []);
 
@@ -466,6 +469,7 @@ export default function Search() {
         onNext={navigateToNextRecipe}
         hasPrevious={selectedRecipeIndex > 0}
         hasNext={selectedRecipeIndex < filteredRecipes.length - 1}
+        unitSystem={unitSystem}
       />
     </View>
   );

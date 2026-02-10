@@ -883,7 +883,7 @@ export const ingredientsData = [
   {
     id: 86,
     name: 'Jalapeno',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Jalapenos',
@@ -1099,7 +1099,7 @@ export const ingredientsData = [
   {
     id: 120,
     name: 'Orange Blossom Water',
-    category: 'other',
+    category: 'beverage',
     images: [],
     alternativeNames: [],
   },
@@ -1120,7 +1120,7 @@ export const ingredientsData = [
   {
     id: 123,
     name: 'Turkish Delight',
-    category: 'other',
+    category: 'baking',
     images: [],
     alternativeNames: [],
   },
@@ -1186,7 +1186,7 @@ export const ingredientsData = [
   {
     id: 127,
     name: 'Black Beans',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Black Bean',
@@ -1284,7 +1284,7 @@ export const ingredientsData = [
   {
     id: 139,
     name: 'Dried White Beans',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
@@ -1316,7 +1316,7 @@ export const ingredientsData = [
   {
     id: 142,
     name: 'Raw King Prawns',
-    category: 'other',
+    category: 'seafood',
     images: [],
     alternativeNames: [],
   },
@@ -1330,7 +1330,7 @@ export const ingredientsData = [
   {
     id: 144,
     name: 'White Wine',
-    category: 'other',
+    category: 'beverage',
     images: [],
     alternativeNames: [
       'Dry White Wine',
@@ -1496,7 +1496,7 @@ export const ingredientsData = [
   {
     id: 161,
     name: 'Rocket',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Arugula',
@@ -1568,7 +1568,7 @@ export const ingredientsData = [
   {
     id: 167,
     name: 'Hot Chilli Powder',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [],
   },
@@ -1665,7 +1665,7 @@ export const ingredientsData = [
   {
     id: 182,
     name: 'Green Chilli',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Green Chili',
@@ -1709,7 +1709,7 @@ export const ingredientsData = [
   {
     id: 186,
     name: 'Black Olives',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Black Olive',
@@ -1729,7 +1729,7 @@ export const ingredientsData = [
   {
     id: 189,
     name: 'Raspberry Jam',
-    category: 'other',
+    category: 'condiments',
     images: [],
     alternativeNames: [
       'Raspberry Preserve',
@@ -1762,7 +1762,7 @@ export const ingredientsData = [
   {
     id: 193,
     name: 'Ricotta',
-    category: 'other',
+    category: 'dairy',
     images: [],
     alternativeNames: [
       'Ricotta Cheese',
@@ -1775,7 +1775,7 @@ export const ingredientsData = [
   {
     id: 194,
     name: 'Orange',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Oranges',
@@ -1796,7 +1796,7 @@ export const ingredientsData = [
   {
     id: 196,
     name: 'Filo Pastry',
-    category: 'other',
+    category: 'baking',
     images: [],
     alternativeNames: [
       'Phyllo Pastry',
@@ -1811,21 +1811,21 @@ export const ingredientsData = [
   {
     id: 197,
     name: 'Ground Pistachios',
-    category: 'other',
+    category: 'nuts',
     images: [],
     alternativeNames: [],
   },
   {
     id: 198,
     name: 'Banana',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: ['Bananas', 'Ripe Banana', 'Ripe Bananas', 'Fresh Banana', 'Yellow Banana'],
   },
   {
     id: 199,
     name: 'Raspberries',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: ['Raspberry', 'Fresh Raspberries', 'Red Raspberries', 'Frozen Raspberries'],
   },
@@ -1876,7 +1876,7 @@ export const ingredientsData = [
   {
     id: 204,
     name: 'Bean Sprouts',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: ['Beansprouts', 'Fresh Bean Sprouts', 'Mung Bean Sprouts', 'Sprouts'],
   },
@@ -1890,7 +1890,7 @@ export const ingredientsData = [
   {
     id: 206,
     name: 'White Bread Mix',
-    category: 'bakery',
+    category: 'baking',
     images: [],
     alternativeNames: [],
   },
@@ -1925,7 +1925,7 @@ export const ingredientsData = [
   {
     id: 212,
     name: 'Marzipan',
-    category: 'other',
+    category: 'baking',
     images: [],
     alternativeNames: [],
   },
@@ -2009,7 +2009,7 @@ export const ingredientsData = [
   {
     id: 219,
     name: 'Butter Beans',
-    category: 'dairy',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Butter Bean',
@@ -2043,14 +2043,14 @@ export const ingredientsData = [
   {
     id: 222,
     name: 'Dry Sherry',
-    category: 'other',
+    category: 'beverage',
     images: [],
     alternativeNames: [],
   },
   {
     id: 223,
     name: 'Sirloin Steak',
-    category: 'other',
+    category: 'meat',
     images: [],
     alternativeNames: [],
   },
@@ -2083,7 +2083,7 @@ export const ingredientsData = [
   {
     id: 227,
     name: 'Red Wine',
-    category: 'other',
+    category: 'beverage',
     images: [],
     alternativeNames: ['Dry Red Wine', 'Cooking Red Wine', 'Cabernet', 'Merlot', 'Pinot Noir'],
   },
@@ -2105,7 +2105,7 @@ export const ingredientsData = [
   {
     id: 229,
     name: 'Puff Pastry',
-    category: 'other',
+    category: 'baking',
     images: [],
     alternativeNames: [
       'Puff Pastry Sheets',
@@ -2119,7 +2119,7 @@ export const ingredientsData = [
   {
     id: 230,
     name: 'Green Beans',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Green Bean',
@@ -2141,7 +2141,7 @@ export const ingredientsData = [
   {
     id: 232,
     name: 'Stout',
-    category: 'other',
+    category: 'beverage',
     images: [],
     alternativeNames: [],
   },
@@ -2155,7 +2155,7 @@ export const ingredientsData = [
   {
     id: 234,
     name: 'Oysters',
-    category: 'other',
+    category: 'seafood',
     images: [],
     alternativeNames: [],
   },
@@ -2204,14 +2204,14 @@ export const ingredientsData = [
   {
     id: 242,
     name: 'Rosemary',
-    category: 'other',
+    category: 'herbs',
     images: [],
     alternativeNames: ['Fresh Rosemary', 'Rosemary Sprigs', 'Rosemary Leaves', 'Rosemary Needles'],
   },
   {
     id: 2420,
     name: 'Dried Rosemary',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [
       'Ground Rosemary',
@@ -2250,7 +2250,7 @@ export const ingredientsData = [
   {
     id: 248,
     name: 'Celery',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Celery Stalks',
@@ -2265,7 +2265,7 @@ export const ingredientsData = [
   {
     id: 249,
     name: 'Leek',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Leeks',
@@ -2280,14 +2280,14 @@ export const ingredientsData = [
   {
     id: 250,
     name: 'Swede',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: ['Rutabaga', 'Swedish Turnip', 'Neep', 'Turnip', 'Yellow Turnip'],
   },
   {
     id: 251,
     name: 'Suet',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
@@ -2322,7 +2322,7 @@ export const ingredientsData = [
   {
     id: 257,
     name: 'Starch',
-    category: 'other',
+    category: 'baking',
     images: [],
     alternativeNames: [],
   },
@@ -2391,14 +2391,14 @@ export const ingredientsData = [
   {
     id: 265,
     name: 'Star Anise',
-    category: 'other',
+    category: 'sppices',
     images: [],
     alternativeNames: ['Whole Star Anise', 'Star Anise Pods', 'Chinese Star Anise', 'Anise Star'],
   },
   {
     id: 266,
     name: 'Coriander Seeds',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [
       'Coriander Seed',
@@ -2425,7 +2425,7 @@ export const ingredientsData = [
   {
     id: 269,
     name: 'Birds-Eye Chillies',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [],
   },
@@ -2512,14 +2512,14 @@ export const ingredientsData = [
   {
     id: 279,
     name: 'Blackcurrant Jam',
-    category: 'other',
+    category: 'condiments',
     images: [],
     alternativeNames: [],
   },
   {
     id: 281,
     name: 'Cannellini Beans',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Cannellini Bean',
@@ -2552,7 +2552,7 @@ export const ingredientsData = [
   {
     id: 287,
     name: 'Mayonnaise',
-    category: 'other',
+    category: 'condiments',
     images: [],
     alternativeNames: [
       'Mayo',
@@ -2593,9 +2593,9 @@ export const ingredientsData = [
   {
     id: 292,
     name: 'Marjoram',
-    category: 'other',
+    category: 'herbs',
     images: [],
-    alternativeNames: [],
+    alternativeNames: ['Fresh Marjoram'],
   },
   {
     id: 294,
@@ -2669,7 +2669,7 @@ export const ingredientsData = [
   {
     id: 303,
     name: 'Hazlenuts',
-    category: 'other',
+    category: 'nuts',
     images: [],
     alternativeNames: [
       'Hazelnuts',
@@ -2698,7 +2698,7 @@ export const ingredientsData = [
   {
     id: 308,
     name: 'Kidney Beans',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [
       'Kidney Bean',
@@ -2725,7 +2725,7 @@ export const ingredientsData = [
   {
     id: 311,
     name: 'Ancho Chillies',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
@@ -2760,7 +2760,7 @@ export const ingredientsData = [
   {
     id: 314,
     name: 'Borlotti Beans',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
@@ -2774,35 +2774,35 @@ export const ingredientsData = [
   {
     id: 316,
     name: 'Cooked Chestnut',
-    category: 'other',
+    category: 'nuts',
     images: [],
     alternativeNames: [],
   },
   {
     id: 317,
     name: 'Cranberry',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
   {
     id: 318,
     name: 'Sultanas',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
   {
     id: 319,
     name: 'Brie',
-    category: 'other',
+    category: 'dairy',
     images: [],
     alternativeNames: [],
   },
   {
     id: 320,
     name: 'Prosciutto',
-    category: 'other',
+    category: 'meat',
     images: [],
     alternativeNames: [],
   },
@@ -2837,7 +2837,7 @@ export const ingredientsData = [
   {
     id: 326,
     name: 'Dark Rum',
-    category: 'other',
+    category: 'beverage',
     images: [],
     alternativeNames: [],
   },
@@ -2851,21 +2851,21 @@ export const ingredientsData = [
   {
     id: 328,
     name: 'Dried Mint',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [],
   },
   {
     id: 329,
     name: 'Cajun',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [],
   },
   {
     id: 330,
     name: 'White Fish',
-    category: 'other',
+    category: 'seafood',
     images: [],
     alternativeNames: [],
   },
@@ -2879,7 +2879,7 @@ export const ingredientsData = [
   {
     id: 333,
     name: 'Salsa',
-    category: 'other',
+    category: 'condiments',
     images: [],
     alternativeNames: [],
   },
@@ -2907,14 +2907,14 @@ export const ingredientsData = [
   {
     id: 337,
     name: 'Kale',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: ['Kale Cabbage', 'Sliced Kale', 'Tuscan Kale'],
   },
   {
     id: 338,
     name: 'Shortcrust Pastry',
-    category: 'other',
+    category: 'baking',
     images: [],
     alternativeNames: [],
   },
@@ -2928,7 +2928,7 @@ export const ingredientsData = [
   {
     id: 340,
     name: 'Raisins',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
@@ -2942,21 +2942,21 @@ export const ingredientsData = [
   {
     id: 342,
     name: 'Pumpkin',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
   {
     id: 343,
     name: 'Dried Apricots',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
   {
     id: 344,
     name: 'Tamarind Pulp',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
@@ -2970,7 +2970,7 @@ export const ingredientsData = [
   {
     id: 346,
     name: 'Cashew Nuts',
-    category: 'other',
+    category: 'nuts',
     images: [],
     alternativeNames: [],
   },
@@ -2991,14 +2991,14 @@ export const ingredientsData = [
   {
     id: 349,
     name: 'Sweetcorn',
-    category: 'other',
+    category: 'produce',
     images: [],
-    alternativeNames: [],
+    alternativeNames: ['Sweet Corn', 'Sugar Corn'],
   },
   {
     id: 350,
     name: 'Green Olives',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
@@ -3054,14 +3054,14 @@ export const ingredientsData = [
   {
     id: 360,
     name: 'Dried Fruit',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
   {
     id: 361,
     name: 'Pickle Juice',
-    category: 'other',
+    category: 'condiment',
     images: [],
     alternativeNames: [],
   },
@@ -3082,14 +3082,14 @@ export const ingredientsData = [
   {
     id: 364,
     name: 'Squash',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
   {
     id: 365,
     name: 'Delicata Squash',
-    category: 'other',
+    category: 'produce',
     images: [],
     alternativeNames: [],
   },
@@ -3110,7 +3110,7 @@ export const ingredientsData = [
   {
     id: 368,
     name: 'Dry White Wine',
-    category: 'other',
+    category: 'beverage',
     images: [],
     alternativeNames: [],
   },
@@ -3124,7 +3124,7 @@ export const ingredientsData = [
   {
     id: 370,
     name: 'Harissa Spice',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [],
   },
@@ -3172,7 +3172,7 @@ export const ingredientsData = [
   {
     id: 377,
     name: 'Fajita Seasoning',
-    category: 'other',
+    category: 'spices',
     images: [],
     alternativeNames: [],
   },

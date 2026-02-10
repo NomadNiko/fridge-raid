@@ -1,10 +1,11 @@
-import { View, Text, ScrollView, Pressable, Linking, useColorScheme, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, TouchableOpacity, Linking, useColorScheme, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { APP_CONFIG } from '../config/app';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { getUserFridge, getUserCollection, getUserRecipes, getCustomIngredients, CustomIngredient } from '../lib/storage';
+import { UnitSystem, getUnitSystem, setUnitSystem } from '../lib/unitConversion';
 
 export default function Settings() {
   const colorScheme = useColorScheme();
@@ -15,6 +16,7 @@ export default function Settings() {
   const [customIngredientsCount, setCustomIngredientsCount] = useState(0);
   const [customIngredients, setCustomIngredients] = useState<CustomIngredient[]>([]);
   const [showIngredientsModal, setShowIngredientsModal] = useState(false);
+  const [unitSystem, setUnitSystemState] = useState<UnitSystem>('original');
 
   useFocusEffect(
     useCallback(() => {
@@ -30,10 +32,17 @@ export default function Settings() {
         setCustomRecipesCount(userRecipes.length);
         setCustomIngredientsCount(customIngs.length);
         setCustomIngredients(customIngs);
+        const savedUnitSystem = await getUnitSystem();
+        setUnitSystemState(savedUnitSystem);
       };
       loadCounts();
     }, [])
   );
+
+  const handleUnitSystemChange = async (system: UnitSystem) => {
+    await setUnitSystem(system);
+    setUnitSystemState(system);
+  };
 
   const handlePrivacyPress = () => {
     Linking.openURL(APP_CONFIG.privacyPolicyUrl);
@@ -134,6 +143,57 @@ export default function Settings() {
                 </Pressable>
               )}
             </View>
+          </View>
+        </View>
+
+        {/* Preferences Section */}
+        <View
+          style={{
+            backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 16,
+          }}>
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 18,
+              fontWeight: '600',
+              marginBottom: 12,
+            }}>
+            Preferences
+          </Text>
+          <Text
+            style={{
+              color: isDark ? '#8e8e93' : '#636366',
+              fontSize: 14,
+              marginBottom: 8,
+            }}>
+            Unit System
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {(['original', 'metric', 'imperial'] as const).map((sys) => (
+              <TouchableOpacity
+                key={sys}
+                onPress={() => handleUnitSystemChange(sys)}
+                style={{
+                  flex: 1,
+                  backgroundColor: unitSystem === sys ? '#007aff' : isDark ? '#2c2c2e' : '#e5e5ea',
+                  paddingVertical: 10,
+                  borderRadius: 10,
+                  alignItems: 'center',
+                }}>
+                <Text
+                  style={{
+                    color: unitSystem === sys ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                    fontWeight: '600',
+                    fontSize: 14,
+                    textTransform: 'capitalize',
+                  }}>
+                  {sys}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 

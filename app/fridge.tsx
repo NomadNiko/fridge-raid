@@ -27,6 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types/ingredient';
 import { matchIngredient, findBuiltInIngredient, findCustomIngredient } from '../lib/ingredientMatcher';
 import IngredientCard from '../components/IngredientCard';
+import { UnitSystem, getUnitSystem, convertUnit } from '../lib/unitConversion';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -115,6 +116,7 @@ export default function Fridge() {
   const [userFridge, setUserFridge] = useState<any[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unitSystem, setUnitSystemState] = useState<UnitSystem>('original');
   const [fridgeExpanded, setFridgeExpanded] = useState(true);
   const [shoppingExpanded, setShoppingExpanded] = useState(true);
   const [allIngredientsExpanded, setAllIngredientsExpanded] = useState(false);
@@ -124,16 +126,18 @@ export default function Fridge() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [ingredients, custom, fridge, collection, userRecipes] = await Promise.all([
+    const [ingredients, custom, fridge, collection, userRecipes, savedUnitSystem] = await Promise.all([
       getIngredients(),
       getCustomIngredients(),
       getFridgeWithDetails(),
       getCollectionWithDetails(),
       getUserRecipes(),
+      getUnitSystem(),
     ]);
     setAllIngredients(ingredients);
     setCustomIngredients(custom);
     setUserFridge(fridge);
+    setUnitSystemState(savedUnitSystem);
 
     const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
     setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
@@ -438,18 +442,20 @@ export default function Fridge() {
                             <Text style={{ fontWeight: '400' }}>
                               {' — '}
                               {item.totalsByUnit
-                                .map((t) =>
-                                  `${formatAmount(t.total)}${t.unit && t.unit !== 'whole' ? ` ${t.unit}` : ''}`
-                                )
+                                .map((t) => {
+                                  const c = convertUnit(t.total, t.unit, unitSystem);
+                                  return `${formatAmount(c.amount)}${c.unit && c.unit !== 'whole' ? ` ${c.unit}` : ''}`;
+                                })
                                 .join(', ')}
                             </Text>
                           )}
                         </Text>
                         <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 12, marginTop: 2 }}>
                           {item.entries
-                            .map((e) =>
-                              `${formatAmount(e.amount * e.multiplier)}${e.unit && e.unit !== 'whole' ? ` ${e.unit}` : ''} from ${e.recipeName}${e.multiplier !== 1 ? ` (${e.multiplier}x)` : ''}`
-                            )
+                            .map((e) => {
+                              const c = convertUnit(e.amount * e.multiplier, e.unit, unitSystem);
+                              return `${formatAmount(c.amount)}${c.unit && c.unit !== 'whole' ? ` ${c.unit}` : ''} from ${e.recipeName}${e.multiplier !== 1 ? ` (${e.multiplier}x)` : ''}`;
+                            })
                             .join(', ')}
                         </Text>
                       </View>

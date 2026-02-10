@@ -27,6 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
 import { getRecipeImage } from '../lib/images';
+import { UnitSystem, getUnitSystem, convertUnit } from '../lib/unitConversion';
 
 const MULTIPLIER_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3];
 
@@ -48,6 +49,7 @@ export default function Collection() {
   const [suggestedRecipes, setSuggestedRecipes] = useState<any[]>([]);
   const [fridgeIngredients, setFridgeIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unitSystem, setUnitSystemState] = useState<UnitSystem>('original');
   const [collectionExpanded, setCollectionExpanded] = useState(true);
   const [suggestedExpanded, setSuggestedExpanded] = useState(true);
   const [collectionPage, setCollectionPage] = useState(1);
@@ -61,14 +63,16 @@ export default function Collection() {
     setLoading(true);
     setCollectionPage(1);
     setSuggestedPage(1);
-    const [collection, allRecipes, fridge, recipes] = await Promise.all([
+    const [collection, allRecipes, fridge, recipes, savedUnitSystem] = await Promise.all([
       getCollectionWithDetails(),
       getRecipes(),
       getFridgeWithDetails(),
       getUserRecipes(),
+      getUnitSystem(),
     ]);
     setUserCollection(collection);
     setUserRecipes(recipes);
+    setUnitSystemState(savedUnitSystem);
 
     const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
     setFridgeIngredients(fridgeIngs);
@@ -338,6 +342,7 @@ export default function Collection() {
                 (ing: { name: string; amount: number; unit: string }, idx: number) => {
                   const hasIng = hasIngredient(ing.name, fridgeIngredients);
                   const displayAmount = ing.amount ? ing.amount * mult : 0;
+                  const converted = convertUnit(displayAmount, ing.unit, unitSystem);
                   return (
                     <View
                       key={idx}
@@ -351,7 +356,7 @@ export default function Collection() {
                           fontSize: 13,
                           fontStyle: hasIng ? 'normal' : 'italic',
                         }}>
-                        {displayAmount ? `${formatAmount(displayAmount)} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
+                        {converted.amount ? `${formatAmount(converted.amount)} ` : ''}{converted.unit && converted.unit !== 'whole' ? `${converted.unit} ` : ''}{ing.name}
                       </Text>
                     </View>
                   );
@@ -426,7 +431,7 @@ export default function Collection() {
         </View>
       </View>
     ),
-    [isDark, fridgeIngredients, isInCollection, toggleCollection, loadData]
+    [isDark, fridgeIngredients, isInCollection, toggleCollection, loadData, unitSystem]
   );
 
   if (loading) {
@@ -616,6 +621,7 @@ export default function Collection() {
                             (ing: { name: string; amount: number; unit: string }, idx: number) => {
                               const hasIng = hasIngredient(ing.name, fridgeIngredients);
                               const displayAmount = ing.amount ? ing.amount * mult : 0;
+                              const converted = convertUnit(displayAmount, ing.unit, unitSystem);
                               return (
                                 <View
                                   key={idx}
@@ -638,7 +644,7 @@ export default function Collection() {
                                       fontSize: 13,
                                       fontStyle: hasIng ? 'normal' : 'italic',
                                     }}>
-                                    {displayAmount ? `${formatAmount(displayAmount)} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
+                                    {converted.amount ? `${formatAmount(converted.amount)} ` : ''}{converted.unit && converted.unit !== 'whole' ? `${converted.unit} ` : ''}{ing.name}
                                   </Text>
                                 </View>
                               );
@@ -916,6 +922,7 @@ export default function Collection() {
           if (selectedRecipe) toggleCollection(selectedRecipe.id);
         }}
         multiplier={selectedRecipeMultiplier}
+        unitSystem={unitSystem}
         onMultiplierChange={(m) => {
           setSelectedRecipeMultiplier(m);
           if (selectedRecipeSource) {

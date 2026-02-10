@@ -4,6 +4,7 @@ import { useState, memo } from 'react';
 import ImageViewer from './ImageViewer';
 import { getRecipeImage } from '../lib/images';
 import { Ionicons } from '@expo/vector-icons';
+import { UnitSystem, convertUnit } from '../lib/unitConversion';
 
 type RecipeCardProps = {
   recipe: Recipe;
@@ -16,6 +17,7 @@ type RecipeCardProps = {
   onToggleShoppingList?: () => void;
   showIngredients?: boolean;
   fridgeIngredients?: any[];
+  unitSystem?: UnitSystem;
 };
 
 function RecipeCard({
@@ -29,6 +31,7 @@ function RecipeCard({
   onToggleShoppingList,
   showIngredients = false,
   fridgeIngredients = [],
+  unitSystem = 'original',
 }: RecipeCardProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -96,17 +99,26 @@ function RecipeCard({
                 {!hasIng && (
                   <Ionicons name="close" size={14} color="#ff3b30" style={{ marginRight: 4 }} />
                 )}
-                <Text
-                  style={{
-                    color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
-                    fontSize: 13,
-                    fontStyle: hasIng ? 'normal' : 'italic',
-                  }}>
-                  {ing.amount ? `${ing.amount} ` : ''}
-                  {ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}
-                  {ing.name}
-                  {ing.preparation && `, ${ing.preparation}`}
-                </Text>
+                {(() => {
+                  const converted = convertUnit(ing.amount || 0, ing.unit, unitSystem);
+                  const formatAmt = (a: number) => {
+                    if (a === 0) return '';
+                    return (Math.round(a * 100) / 100).toString();
+                  };
+                  return (
+                  <Text
+                    style={{
+                      color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
+                      fontSize: 13,
+                      fontStyle: hasIng ? 'normal' : 'italic',
+                    }}>
+                    {converted.amount ? `${formatAmt(converted.amount)} ` : ''}
+                    {converted.unit && converted.unit !== 'whole' ? `${converted.unit} ` : ''}
+                    {ing.name}
+                    {ing.preparation && `, ${ing.preparation}`}
+                  </Text>
+                  );
+                })()}
               </View>
             );
           })}
