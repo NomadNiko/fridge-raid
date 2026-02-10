@@ -82,6 +82,14 @@ const parseFractionAmount = (amount: string): number => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
+const MULTIPLIER_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3];
+
+const formatAmount = (amount: number): string => {
+  if (amount === 0) return '';
+  const rounded = Math.round(amount * 100) / 100;
+  return rounded.toString();
+};
+
 export default function Cookbook() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -92,6 +100,8 @@ export default function Cookbook() {
   const [showScanner, setShowScanner] = useState(false);
   const [showUrlImport, setShowUrlImport] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedRecipeMultiplier, setSelectedRecipeMultiplier] = useState(1);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const scrollViewRef = useRef<ScrollView>(null);
   const recipesHeaderRef = useRef<View>(null);
@@ -232,6 +242,11 @@ export default function Cookbook() {
       await updateUserRecipe(id, { includeInShoppingList: !recipe.includeInShoppingList });
       loadRecipes();
     }
+  };
+
+  const handleMultiplierChange = async (id: number, multiplier: number) => {
+    await updateUserRecipe(id, { multiplier });
+    setRecipes((prev) => prev.map((r) => (r.id === id ? { ...r, multiplier } : r)));
   };
 
   const handleRecipeScanned = (scannedRecipe: {
@@ -825,8 +840,32 @@ export default function Cookbook() {
                         ? '✓ You have all ingredients!'
                         : `Missing ${missingCount} ingredient${missingCount > 1 ? 's' : ''}`}
                     </Text>
+                    <View style={{ flexDirection: 'row', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+                      {MULTIPLIER_OPTIONS.map((m) => (
+                        <TouchableOpacity
+                          key={m}
+                          onPress={() => handleMultiplierChange(recipe.id, m)}
+                          style={{
+                            backgroundColor: (recipe.multiplier ?? 1) === m ? '#007aff' : isDark ? '#2c2c2e' : '#e5e5ea',
+                            paddingHorizontal: 8,
+                            paddingVertical: 4,
+                            borderRadius: 12,
+                          }}>
+                          <Text style={{
+                            color: (recipe.multiplier ?? 1) === m ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                            fontSize: 13,
+                            fontWeight: '600',
+                          }}>
+                            {m}x
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   </View>
 
+                  {(() => {
+                    const mult = recipe.multiplier ?? 1;
+                    return (
                   <View style={{ marginBottom: 12 }}>
                     <Text
                       style={{
@@ -843,6 +882,7 @@ export default function Cookbook() {
                         idx: number
                       ) => {
                         const hasIng = hasIngredient(ing.name, fridgeIngredients);
+                        const displayAmount = ing.amount ? ing.amount * mult : 0;
                         return (
                           <View
                             key={idx}
@@ -861,7 +901,7 @@ export default function Cookbook() {
                                 fontSize: 13,
                                 fontStyle: hasIng ? 'normal' : 'italic',
                               }}>
-                              {ing.amount ? `${ing.amount} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
+                              {displayAmount ? `${formatAmount(displayAmount)} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
                               {ing.preparation && `, ${ing.preparation}`}
                             </Text>
                           </View>
@@ -869,10 +909,16 @@ export default function Cookbook() {
                       }
                     )}
                   </View>
+                    );
+                  })()}
 
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <TouchableOpacity
-                      onPress={() => setSelectedRecipe(recipeObj)}
+                      onPress={() => {
+                        setSelectedRecipe(recipeObj);
+                        setSelectedRecipeMultiplier(recipe.multiplier ?? 1);
+                        setSelectedRecipeId(recipe.id);
+                      }}
                       accessible={true}
                       accessibilityLabel={`View ${recipeObj.name} recipe details`}
                       accessibilityRole="button"
@@ -994,11 +1040,21 @@ export default function Cookbook() {
         visible={!!selectedRecipe}
         recipe={selectedRecipe}
         isInCollection={false}
-        onClose={() => setSelectedRecipe(null)}
+        onClose={() => {
+          setSelectedRecipe(null);
+          setSelectedRecipeId(null);
+        }}
         onToggleCollection={() => {
           if (selectedRecipe) handleDelete(selectedRecipe.id, selectedRecipe.name);
         }}
         hideCollectionButton={true}
+        multiplier={selectedRecipeMultiplier}
+        onMultiplierChange={(m) => {
+          setSelectedRecipeMultiplier(m);
+          if (selectedRecipeId) {
+            handleMultiplierChange(selectedRecipeId, m);
+          }
+        }}
       />
 
       <RecipeScannerModal

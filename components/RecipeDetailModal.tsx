@@ -16,6 +16,14 @@ import { getRecipeImage } from '../lib/images';
 import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
 
+const MULTIPLIER_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3];
+
+const formatAmount = (amount: number): string => {
+  if (amount === 0) return '';
+  const rounded = Math.round(amount * 100) / 100;
+  return rounded.toString();
+};
+
 type RecipeDetailModalProps = {
   visible: boolean;
   recipe: Recipe | null;
@@ -28,6 +36,9 @@ type RecipeDetailModalProps = {
   onNext?: () => void;
   hasPrevious?: boolean;
   hasNext?: boolean;
+  // Multiplier props (optional)
+  multiplier?: number;
+  onMultiplierChange?: (m: number) => void;
 };
 
 export default function RecipeDetailModal({
@@ -41,6 +52,8 @@ export default function RecipeDetailModal({
   onNext,
   hasPrevious = false,
   hasNext = false,
+  multiplier = 1,
+  onMultiplierChange,
 }: RecipeDetailModalProps) {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -174,7 +187,7 @@ export default function RecipeDetailModal({
 
           <View style={{ gap: 8, marginBottom: 20 }}>
             <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 15 }}>
-              🍽️ {recipe.servings} servings
+              🍽️ {formatAmount(recipe.servings * multiplier)} servings{multiplier !== 1 ? ` (${multiplier}x)` : ''}
             </Text>
             <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 15 }}>
               🥣 Prep: {recipe.prepTime} min
@@ -183,6 +196,35 @@ export default function RecipeDetailModal({
               🍳 Cook: {recipe.cookTime} min
             </Text>
           </View>
+
+          {onMultiplierChange && (
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 13, fontWeight: '600', marginBottom: 6 }}>
+                Servings Multiplier
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                {MULTIPLIER_OPTIONS.map((m) => (
+                  <TouchableOpacity
+                    key={m}
+                    onPress={() => onMultiplierChange(m)}
+                    style={{
+                      backgroundColor: multiplier === m ? '#007aff' : isDark ? '#2c2c2e' : '#e5e5ea',
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                      borderRadius: 14,
+                    }}>
+                    <Text style={{
+                      color: multiplier === m ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                      fontSize: 14,
+                      fontWeight: '600',
+                    }}>
+                      {m}x
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           <Text
             style={{
@@ -205,6 +247,7 @@ export default function RecipeDetailModal({
               idx: number
             ) => {
               const hasIng = hasIngredient(ing.name, fridgeIngredients);
+              const displayAmount = ing.amount ? ing.amount * multiplier : 0;
               return (
                 <View
                   key={idx}
@@ -221,7 +264,7 @@ export default function RecipeDetailModal({
                       flex: 1,
                       fontStyle: hasIng ? 'normal' : 'italic',
                     }}>
-                    {ing.amount ? `${ing.amount} ` : ''}
+                    {displayAmount ? `${formatAmount(displayAmount)} ` : ''}
                     {ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}
                     {ing.name}
                     {ing.preparation && `, ${ing.preparation}`}

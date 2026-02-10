@@ -33,6 +33,7 @@ export type UserCollectionItem = {
   timesCooked?: number;
   userRating?: number;
   includeInShoppingList?: boolean;
+  multiplier?: number;
 };
 
 export type UserRecipe = {
@@ -48,6 +49,7 @@ export type UserRecipe = {
   category?: string;
   addedDate: string;
   includeInShoppingList?: boolean;
+  multiplier?: number;
 };
 
 const getItem = async (key: string): Promise<string | null> => {
@@ -226,6 +228,7 @@ export const addToCollection = async (recipeId: number, notes?: string) => {
     notes,
     timesCooked: 0,
     includeInShoppingList: true,
+    multiplier: 1,
   });
   await setItem('userCollection', JSON.stringify(collection));
 };
@@ -297,6 +300,7 @@ export const addUserRecipe = async (recipe: Omit<UserRecipe, 'id' | 'addedDate'>
     id: newId,
     addedDate: new Date().toISOString(),
     includeInShoppingList: true,
+    multiplier: 1,
   };
   recipes.push(newRecipe);
   await setItem('userRecipes', JSON.stringify(recipes));

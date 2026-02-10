@@ -21,6 +21,7 @@ import {
   removeCustomFromFridge,
   findOrCreateCustomIngredient,
   CustomIngredient,
+  UserRecipe,
 } from '../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Ingredient } from '../types/ingredient';
@@ -29,6 +30,82 @@ import IngredientCard from '../components/IngredientCard';
 
 const ITEMS_PER_PAGE = 10;
 
+type ShoppingListEntry = {
+  recipeName: string;
+  amount: number;
+  unit: string;
+  multiplier: number;
+};
+
+type ShoppingListItem = {
+  name: string;
+  entries: ShoppingListEntry[];
+  totalsByUnit: { unit: string; total: number }[];
+};
+
+const formatAmount = (amount: number): string => {
+  if (amount === 0) return '';
+  const rounded = Math.round(amount * 100) / 100;
+  return rounded.toString();
+};
+
+function buildShoppingList(
+  fridgeIngredients: (Ingredient | CustomIngredient)[],
+  collection: any[],
+  userRecipes: UserRecipe[]
+): ShoppingListItem[] {
+  const missingIngredients = new Map<string, ShoppingListItem>();
+
+  const processRecipeIngredients = (
+    ingredients: { name: string; amount: number; unit: string }[],
+    recipeName: string,
+    multiplier: number
+  ) => {
+    ingredients.forEach((ing) => {
+      const matched = matchIngredient(ing.name, fridgeIngredients);
+      if (!matched) {
+        const key = ing.name.toLowerCase();
+        if (!missingIngredients.has(key)) {
+          missingIngredients.set(key, { name: ing.name, entries: [], totalsByUnit: [] });
+        }
+        missingIngredients.get(key)!.entries.push({
+          recipeName,
+          amount: ing.amount,
+          unit: ing.unit,
+          multiplier,
+        });
+      }
+    });
+  };
+
+  collection.forEach((item) => {
+    if (item.recipe && item.includeInShoppingList !== false) {
+      processRecipeIngredients(
+        item.recipe.ingredients,
+        item.recipe.name,
+        item.multiplier ?? 1
+      );
+    }
+  });
+
+  userRecipes.forEach((recipe) => {
+    if (recipe.includeInShoppingList !== false) {
+      processRecipeIngredients(recipe.ingredients, recipe.name, recipe.multiplier ?? 1);
+    }
+  });
+
+  for (const item of missingIngredients.values()) {
+    const unitTotals = new Map<string, number>();
+    item.entries.forEach((e) => {
+      const u = e.unit || '';
+      unitTotals.set(u, (unitTotals.get(u) || 0) + e.amount * e.multiplier);
+    });
+    item.totalsByUnit = Array.from(unitTotals.entries()).map(([unit, total]) => ({ unit, total }));
+  }
+
+  return Array.from(missingIngredients.values());
+}
+
 export default function Fridge() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -36,7 +113,7 @@ export default function Fridge() {
   const [allIngredients, setAllIngredients] = useState<Ingredient[]>([]);
   const [customIngredients, setCustomIngredients] = useState<CustomIngredient[]>([]);
   const [userFridge, setUserFridge] = useState<any[]>([]);
-  const [shoppingList, setShoppingList] = useState<any[]>([]);
+  const [shoppingList, setShoppingList] = useState<ShoppingListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [fridgeExpanded, setFridgeExpanded] = useState(true);
   const [shoppingExpanded, setShoppingExpanded] = useState(true);
@@ -58,50 +135,8 @@ export default function Fridge() {
     setCustomIngredients(custom);
     setUserFridge(fridge);
 
-    const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
-    const missingIngredients = new Map();
-
-    collection.forEach((item) => {
-      if (item.recipe && item.includeInShoppingList !== false) {
-        item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
-          const matched = matchIngredient(ing.name, fridgeIngredients);
-          if (!matched) {
-            const ingName = ing.name.toLowerCase();
-            if (!missingIngredients.has(ingName)) {
-              missingIngredients.set(ingName, {
-                name: ing.name,
-                amount: ing.amount,
-                unit: ing.unit,
-                recipes: [],
-              });
-            }
-            missingIngredients.get(ingName).recipes.push(item.recipe.name);
-          }
-        });
-      }
-    });
-
-    userRecipes.forEach((recipe) => {
-      if (recipe.includeInShoppingList !== false) {
-        recipe.ingredients.forEach((ing) => {
-          const matched = matchIngredient(ing.name, fridgeIngredients);
-          if (!matched) {
-            const ingName = ing.name.toLowerCase();
-            if (!missingIngredients.has(ingName)) {
-              missingIngredients.set(ingName, {
-                name: ing.name,
-                amount: ing.amount,
-                unit: ing.unit,
-                recipes: [],
-              });
-            }
-            missingIngredients.get(ingName).recipes.push(recipe.name);
-          }
-        });
-      }
-    });
-
-    setShoppingList(Array.from(missingIngredients.values()));
+    const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
+    setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
     setLoading(false);
   }, []);
 
@@ -167,50 +202,8 @@ export default function Fridge() {
       ]);
       setUserFridge(fridge);
 
-      const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
-      const missingIngredients = new Map();
-
-      collection.forEach((item) => {
-        if (item.recipe && item.includeInShoppingList !== false) {
-          item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
-            const matched = matchIngredient(ing.name, fridgeIngredients);
-            if (!matched) {
-              const ingName = ing.name.toLowerCase();
-              if (!missingIngredients.has(ingName)) {
-                missingIngredients.set(ingName, {
-                  name: ing.name,
-                  amount: ing.amount,
-                  unit: ing.unit,
-                  recipes: [],
-                });
-              }
-              missingIngredients.get(ingName).recipes.push(item.recipe.name);
-            }
-          });
-        }
-      });
-
-      userRecipes.forEach((recipe) => {
-        if (recipe.includeInShoppingList !== false) {
-          recipe.ingredients.forEach((ing) => {
-            const matched = matchIngredient(ing.name, fridgeIngredients);
-            if (!matched) {
-              const ingName = ing.name.toLowerCase();
-              if (!missingIngredients.has(ingName)) {
-                missingIngredients.set(ingName, {
-                  name: ing.name,
-                  amount: ing.amount,
-                  unit: ing.unit,
-                  recipes: [],
-                });
-              }
-              missingIngredients.get(ingName).recipes.push(recipe.name);
-            }
-          });
-        }
-      });
-
-      setShoppingList(Array.from(missingIngredients.values()));
+      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
+      setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
     } finally {
       toggleInProgress.current.delete(ingredientId);
     }
@@ -233,50 +226,8 @@ export default function Fridge() {
       ]);
       setUserFridge(fridge);
 
-      const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
-      const missingIngredients = new Map();
-
-      collection.forEach((item) => {
-        if (item.recipe && item.includeInShoppingList !== false) {
-          item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
-            const matched = matchIngredient(ing.name, fridgeIngredients);
-            if (!matched) {
-              const ingName = ing.name.toLowerCase();
-              if (!missingIngredients.has(ingName)) {
-                missingIngredients.set(ingName, {
-                  name: ing.name,
-                  amount: ing.amount,
-                  unit: ing.unit,
-                  recipes: [],
-                });
-              }
-              missingIngredients.get(ingName).recipes.push(item.recipe.name);
-            }
-          });
-        }
-      });
-
-      userRecipes.forEach((recipe) => {
-        if (recipe.includeInShoppingList !== false) {
-          recipe.ingredients.forEach((ing) => {
-            const matched = matchIngredient(ing.name, fridgeIngredients);
-            if (!matched) {
-              const ingName = ing.name.toLowerCase();
-              if (!missingIngredients.has(ingName)) {
-                missingIngredients.set(ingName, {
-                  name: ing.name,
-                  amount: ing.amount,
-                  unit: ing.unit,
-                  recipes: [],
-                });
-              }
-              missingIngredients.get(ingName).recipes.push(recipe.name);
-            }
-          });
-        }
-      });
-
-      setShoppingList(Array.from(missingIngredients.values()));
+      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
+      setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
     } finally {
       toggleInProgress.current.delete(key as number);
     }
@@ -295,50 +246,8 @@ export default function Fridge() {
       ]);
       setUserFridge(fridge);
 
-      const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
-      const missingIngredients = new Map();
-
-      collection.forEach((item) => {
-        if (item.recipe && item.includeInShoppingList !== false) {
-          item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
-            const matched = matchIngredient(ing.name, fridgeIngredients);
-            if (!matched) {
-              const ingName = ing.name.toLowerCase();
-              if (!missingIngredients.has(ingName)) {
-                missingIngredients.set(ingName, {
-                  name: ing.name,
-                  amount: ing.amount,
-                  unit: ing.unit,
-                  recipes: [],
-                });
-              }
-              missingIngredients.get(ingName).recipes.push(item.recipe.name);
-            }
-          });
-        }
-      });
-
-      userRecipes.forEach((recipe) => {
-        if (recipe.includeInShoppingList !== false) {
-          recipe.ingredients.forEach((ing) => {
-            const matched = matchIngredient(ing.name, fridgeIngredients);
-            if (!matched) {
-              const ingName = ing.name.toLowerCase();
-              if (!missingIngredients.has(ingName)) {
-                missingIngredients.set(ingName, {
-                  name: ing.name,
-                  amount: ing.amount,
-                  unit: ing.unit,
-                  recipes: [],
-                });
-              }
-              missingIngredients.get(ingName).recipes.push(recipe.name);
-            }
-          });
-        }
-      });
-
-      setShoppingList(Array.from(missingIngredients.values()));
+      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
+      setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
     } finally {
       toggleInProgress.current.delete(key as unknown as number);
     }
@@ -357,50 +266,8 @@ export default function Fridge() {
       setUserFridge(fridge);
       setCustomIngredients(custom);
 
-      const fridgeIngredients = fridge.map((item) => item.ingredient).filter(Boolean);
-      const missingIngredients = new Map();
-
-      collection.forEach((item) => {
-        if (item.recipe && item.includeInShoppingList !== false) {
-          item.recipe.ingredients.forEach((ing: { name: string; amount: number; unit: string }) => {
-            const matched = matchIngredient(ing.name, fridgeIngredients);
-            if (!matched) {
-              const ingName = ing.name.toLowerCase();
-              if (!missingIngredients.has(ingName)) {
-                missingIngredients.set(ingName, {
-                  name: ing.name,
-                  amount: ing.amount,
-                  unit: ing.unit,
-                  recipes: [],
-                });
-              }
-              missingIngredients.get(ingName).recipes.push(item.recipe.name);
-            }
-          });
-        }
-      });
-
-      userRecipes.forEach((recipe) => {
-        if (recipe.includeInShoppingList !== false) {
-          recipe.ingredients.forEach((ing) => {
-            const matched = matchIngredient(ing.name, fridgeIngredients);
-            if (!matched) {
-              const ingName = ing.name.toLowerCase();
-              if (!missingIngredients.has(ingName)) {
-                missingIngredients.set(ingName, {
-                  name: ing.name,
-                  amount: ing.amount,
-                  unit: ing.unit,
-                  recipes: [],
-                });
-              }
-              missingIngredients.get(ingName).recipes.push(recipe.name);
-            }
-          });
-        }
-      });
-
-      setShoppingList(Array.from(missingIngredients.values()));
+      const fridgeIngs = fridge.map((item) => item.ingredient).filter(Boolean);
+      setShoppingList(buildShoppingList(fridgeIngs, collection, userRecipes));
     } catch (e) {
       console.error('Failed to add custom ingredient:', e);
     }
@@ -547,6 +414,7 @@ export default function Fridge() {
               shoppingList.map((item, idx) => {
                 const builtInIng = findBuiltInIngredient(item.name, allIngredients);
                 const customIng = findCustomIngredient(item.name, customIngredients);
+                const firstUnit = item.entries.length > 0 ? item.entries[0].unit : '';
                 return (
                   <View
                     key={idx}
@@ -555,49 +423,62 @@ export default function Fridge() {
                       padding: 12,
                       borderRadius: 8,
                       marginBottom: 8,
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
                     }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <View style={{ flex: 1 }}>
                         <Text
                           style={{
                             color: isDark ? '#ffffff' : '#000000',
                             fontSize: 16,
-                            marginBottom: 4,
+                            fontWeight: '600',
+                            marginBottom: 2,
                           }}>
                           {item.name}
+                          {item.totalsByUnit.length > 0 && (
+                            <Text style={{ fontWeight: '400' }}>
+                              {' — '}
+                              {item.totalsByUnit
+                                .map((t) =>
+                                  `${formatAmount(t.total)}${t.unit && t.unit !== 'whole' ? ` ${t.unit}` : ''}`
+                                )
+                                .join(', ')}
+                            </Text>
+                          )}
                         </Text>
-                        <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 13 }}>
-                          Needed for: {item.recipes.join(', ')}
+                        <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 12, marginTop: 2 }}>
+                          {item.entries
+                            .map((e) =>
+                              `${formatAmount(e.amount * e.multiplier)}${e.unit && e.unit !== 'whole' ? ` ${e.unit}` : ''} from ${e.recipeName}${e.multiplier !== 1 ? ` (${e.multiplier}x)` : ''}`
+                            )
+                            .join(', ')}
                         </Text>
                       </View>
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (builtInIng) {
+                            handleAddToFridge(builtInIng.id);
+                          } else if (customIng) {
+                            handleAddCustomToFridge(customIng.id);
+                          } else {
+                            handleAddNewCustomIngredient(item.name, firstUnit);
+                          }
+                        }}
+                        accessible={true}
+                        accessibilityLabel={`Add ${item.name} to fridge`}
+                        accessibilityRole="button"
+                        style={{
+                          backgroundColor: '#007aff',
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                          marginLeft: 8,
+                          alignSelf: 'center',
+                        }}>
+                        <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>
+                          Add
+                        </Text>
+                      </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (builtInIng) {
-                          handleAddToFridge(builtInIng.id);
-                        } else if (customIng) {
-                          handleAddCustomToFridge(customIng.id);
-                        } else {
-                          handleAddNewCustomIngredient(item.name, item.unit);
-                        }
-                      }}
-                      accessible={true}
-                      accessibilityLabel={`Add ${item.name} to fridge`}
-                      accessibilityRole="button"
-                      style={{
-                        backgroundColor: '#007aff',
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 6,
-                        marginLeft: 8,
-                      }}>
-                      <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>
-                        Add
-                      </Text>
-                    </TouchableOpacity>
                   </View>
                 );
               })

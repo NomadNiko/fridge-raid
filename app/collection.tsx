@@ -28,11 +28,21 @@ import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
 import { getRecipeImage } from '../lib/images';
 
+const MULTIPLIER_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3];
+
+const formatAmount = (amount: number): string => {
+  if (amount === 0) return '';
+  const rounded = Math.round(amount * 100) / 100;
+  return rounded.toString();
+};
+
 export default function Collection() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const router = useRouter();
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [selectedRecipeMultiplier, setSelectedRecipeMultiplier] = useState(1);
+  const [selectedRecipeSource, setSelectedRecipeSource] = useState<{ type: 'collection' | 'userRecipe'; id: number } | null>(null);
   const [userCollection, setUserCollection] = useState<any[]>([]);
   const [userRecipes, setUserRecipes] = useState<UserRecipe[]>([]);
   const [suggestedRecipes, setSuggestedRecipes] = useState<any[]>([]);
@@ -134,6 +144,22 @@ export default function Collection() {
         )
       );
     }
+  };
+
+  const handleCollectionMultiplierChange = async (recipeId: number, multiplier: number) => {
+    await updateCollectionItem(recipeId, { multiplier });
+    setUserCollection((prev) =>
+      prev.map((item) =>
+        item.recipeId === recipeId ? { ...item, multiplier } : item
+      )
+    );
+  };
+
+  const handleUserRecipeMultiplierChange = async (id: number, multiplier: number) => {
+    await updateUserRecipe(id, { multiplier });
+    setUserRecipes((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, multiplier } : r))
+    );
   };
 
   const isInCollection = useCallback(
@@ -269,9 +295,34 @@ export default function Collection() {
                 : `Missing ${missingCount} ingredient${missingCount > 1 ? 's' : ''}`}
             </Text>
           )}
+          {collectionItem && (
+            <View style={{ flexDirection: 'row', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+              {MULTIPLIER_OPTIONS.map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  onPress={() => handleCollectionMultiplierChange(recipe.id, m)}
+                  style={{
+                    backgroundColor: (collectionItem.multiplier ?? 1) === m ? '#007aff' : isDark ? '#2c2c2e' : '#e5e5ea',
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 12,
+                  }}>
+                  <Text style={{
+                    color: (collectionItem.multiplier ?? 1) === m ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                    fontSize: 13,
+                    fontWeight: '600',
+                  }}>
+                    {m}x
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
 
-        {missingCount !== undefined && (
+        {missingCount !== undefined && (() => {
+          const mult = collectionItem?.multiplier ?? 1;
+          return (
           <View style={{ flexDirection: 'row', marginBottom: 12 }}>
             <View style={{ flex: 1 }}>
               <Text
@@ -286,6 +337,7 @@ export default function Collection() {
               {recipe.ingredients.map(
                 (ing: { name: string; amount: number; unit: string }, idx: number) => {
                   const hasIng = hasIngredient(ing.name, fridgeIngredients);
+                  const displayAmount = ing.amount ? ing.amount * mult : 0;
                   return (
                     <View
                       key={idx}
@@ -299,7 +351,7 @@ export default function Collection() {
                           fontSize: 13,
                           fontStyle: hasIng ? 'normal' : 'italic',
                         }}>
-                        {ing.amount ? `${ing.amount} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
+                        {displayAmount ? `${formatAmount(displayAmount)} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
                       </Text>
                     </View>
                   );
@@ -317,11 +369,16 @@ export default function Collection() {
               ) : null;
             })()}
           </View>
-        )}
+          );
+        })()}
 
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <TouchableOpacity
-            onPress={() => setSelectedRecipe(recipe)}
+            onPress={() => {
+              setSelectedRecipe(recipe);
+              setSelectedRecipeMultiplier(collectionItem?.multiplier ?? 1);
+              setSelectedRecipeSource(collectionItem ? { type: 'collection', id: recipe.id } : null);
+            }}
             accessible={true}
             accessibilityLabel={`View ${recipe.name} recipe details`}
             accessibilityRole="button"
@@ -518,8 +575,32 @@ export default function Collection() {
                             ? '✓ You have all ingredients!'
                             : `Missing ${missingCount} ingredient${missingCount > 1 ? 's' : ''}`}
                         </Text>
+                        <View style={{ flexDirection: 'row', gap: 4, marginBottom: 8, flexWrap: 'wrap' }}>
+                          {MULTIPLIER_OPTIONS.map((m) => (
+                            <TouchableOpacity
+                              key={m}
+                              onPress={() => handleUserRecipeMultiplierChange(userRecipe.id, m)}
+                              style={{
+                                backgroundColor: ((userRecipe as UserRecipe).multiplier ?? 1) === m ? '#007aff' : isDark ? '#2c2c2e' : '#e5e5ea',
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                borderRadius: 12,
+                              }}>
+                              <Text style={{
+                                color: ((userRecipe as UserRecipe).multiplier ?? 1) === m ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                                fontSize: 13,
+                                fontWeight: '600',
+                              }}>
+                                {m}x
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
                       </View>
 
+                      {(() => {
+                        const mult = (userRecipe as UserRecipe).multiplier ?? 1;
+                        return (
                       <View style={{ flexDirection: 'row', marginBottom: 12 }}>
                         <View style={{ flex: 1 }}>
                           <Text
@@ -534,6 +615,7 @@ export default function Collection() {
                           {recipe.ingredients.map(
                             (ing: { name: string; amount: number; unit: string }, idx: number) => {
                               const hasIng = hasIngredient(ing.name, fridgeIngredients);
+                              const displayAmount = ing.amount ? ing.amount * mult : 0;
                               return (
                                 <View
                                   key={idx}
@@ -556,7 +638,7 @@ export default function Collection() {
                                       fontSize: 13,
                                       fontStyle: hasIng ? 'normal' : 'italic',
                                     }}>
-                                    {ing.amount ? `${ing.amount} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
+                                    {displayAmount ? `${formatAmount(displayAmount)} ` : ''}{ing.unit && ing.unit !== 'whole' ? `${ing.unit} ` : ''}{ing.name}
                                   </Text>
                                 </View>
                               );
@@ -574,10 +656,16 @@ export default function Collection() {
                           ) : null;
                         })()}
                       </View>
+                        );
+                      })()}
 
                       <View style={{ flexDirection: 'row', gap: 8 }}>
                         <TouchableOpacity
-                          onPress={() => setSelectedRecipe(recipe)}
+                          onPress={() => {
+                            setSelectedRecipe(recipe);
+                            setSelectedRecipeMultiplier((userRecipe as UserRecipe).multiplier ?? 1);
+                            setSelectedRecipeSource({ type: 'userRecipe', id: userRecipe.id });
+                          }}
                           accessible={true}
                           accessibilityLabel={`View ${recipe.name} recipe details`}
                           accessibilityRole="button"
@@ -820,9 +908,23 @@ export default function Collection() {
         visible={!!selectedRecipe}
         recipe={selectedRecipe}
         isInCollection={selectedRecipe ? isInCollection(selectedRecipe.id) : false}
-        onClose={() => setSelectedRecipe(null)}
+        onClose={() => {
+          setSelectedRecipe(null);
+          setSelectedRecipeSource(null);
+        }}
         onToggleCollection={() => {
           if (selectedRecipe) toggleCollection(selectedRecipe.id);
+        }}
+        multiplier={selectedRecipeMultiplier}
+        onMultiplierChange={(m) => {
+          setSelectedRecipeMultiplier(m);
+          if (selectedRecipeSource) {
+            if (selectedRecipeSource.type === 'collection') {
+              handleCollectionMultiplierChange(selectedRecipeSource.id, m);
+            } else {
+              handleUserRecipeMultiplierChange(selectedRecipeSource.id, m);
+            }
+          }
         }}
       />
     </View>
