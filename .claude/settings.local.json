@@ -11,7 +11,9 @@
       "Bash(node scripts/find-long-steps.js:*)",
       "Bash(node scripts/find-single-step.js:*)",
       "Bash(node:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(ls -la \"c:\\\\Users\\\\admin\\\\scraping\\\\fridge-raid-scraper\\\\types\"\" && echo \"---\" && ls -la \"c:Usersadminscrapingfridge-raid-scraperlib\"\")",
+      "WebFetch(domain:www.revenuecat.com)"
     ]
   }
 }

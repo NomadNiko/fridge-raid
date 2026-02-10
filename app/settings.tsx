@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, TouchableOpacity, Linking, useColorScheme, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, TouchableOpacity, Linking, useColorScheme, Alert, Modal, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { APP_CONFIG } from '../config/app';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { getUserFridge, getUserCollection, getUserRecipes, getCustomIngredients, CustomIngredient } from '../lib/storage';
 import { UnitSystem, getUnitSystem, setUnitSystem } from '../lib/unitConversion';
+import { useRevenueCat } from '../lib/revenueCat';
 
 export default function Settings() {
   const colorScheme = useColorScheme();
@@ -17,6 +18,8 @@ export default function Settings() {
   const [customIngredients, setCustomIngredients] = useState<CustomIngredient[]>([]);
   const [showIngredientsModal, setShowIngredientsModal] = useState(false);
   const [unitSystem, setUnitSystemState] = useState<UnitSystem>('original');
+  const [restoringPurchases, setRestoringPurchases] = useState(false);
+  const { isPremium, presentPaywall, presentCustomerCenter, restorePurchases } = useRevenueCat();
 
   useFocusEffect(
     useCallback(() => {
@@ -42,6 +45,30 @@ export default function Settings() {
   const handleUnitSystemChange = async (system: UnitSystem) => {
     await setUnitSystem(system);
     setUnitSystemState(system);
+  };
+
+  const handleUpgrade = async () => {
+    await presentPaywall();
+  };
+
+  const handleManageSubscription = async () => {
+    await presentCustomerCenter();
+  };
+
+  const handleRestorePurchases = async () => {
+    setRestoringPurchases(true);
+    try {
+      const restored = await restorePurchases();
+      if (restored) {
+        Alert.alert('Restored', 'Your premium access has been restored.');
+      } else {
+        Alert.alert('No Purchases Found', 'We could not find any previous purchases to restore.');
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+    } finally {
+      setRestoringPurchases(false);
+    }
   };
 
   const handlePrivacyPress = () => {
@@ -195,6 +222,95 @@ export default function Settings() {
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Subscription Section */}
+        <View
+          style={{
+            backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 16,
+          }}>
+          <Text
+            style={{
+              color: isDark ? '#ffffff' : '#000000',
+              fontSize: 18,
+              fontWeight: '600',
+              marginBottom: 12,
+            }}>
+            Subscription
+          </Text>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
+              Status:
+            </Text>
+            <View
+              style={{
+                backgroundColor: isPremium ? '#34c75920' : (isDark ? '#2c2c2e' : '#e5e5ea'),
+                paddingHorizontal: 12,
+                paddingVertical: 4,
+                borderRadius: 12,
+              }}>
+              <Text
+                style={{
+                  color: isPremium ? '#34c759' : (isDark ? '#8e8e93' : '#636366'),
+                  fontSize: 14,
+                  fontWeight: '600',
+                }}>
+                {isPremium ? 'Premium' : 'Free'}
+              </Text>
+            </View>
+          </View>
+
+          {isPremium ? (
+            <Pressable
+              onPress={handleManageSubscription}
+              style={{
+                backgroundColor: '#007aff',
+                borderRadius: 10,
+                paddingVertical: 12,
+                alignItems: 'center',
+              }}>
+              <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 16 }}>
+                Manage Subscription
+              </Text>
+            </Pressable>
+          ) : (
+            <View style={{ gap: 8 }}>
+              <Pressable
+                onPress={handleUpgrade}
+                style={{
+                  backgroundColor: '#007aff',
+                  borderRadius: 10,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                }}>
+                <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 16 }}>
+                  Upgrade to Premium
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleRestorePurchases}
+                disabled={restoringPurchases}
+                style={{
+                  backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                  borderRadius: 10,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  opacity: restoringPurchases ? 0.6 : 1,
+                }}>
+                {restoringPurchases ? (
+                  <ActivityIndicator size="small" color={isDark ? '#ffffff' : '#000000'} />
+                ) : (
+                  <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600', fontSize: 16 }}>
+                    Restore Purchases
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          )}
         </View>
 
         {/* App Info Section */}

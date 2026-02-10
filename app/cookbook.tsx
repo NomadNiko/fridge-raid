@@ -28,6 +28,7 @@ import { Recipe } from '../types';
 import { Ingredient } from '../types/ingredient';
 import { hasIngredient } from '../lib/ingredientMatcher';
 import { UnitSystem, getUnitSystem, convertUnit } from '../lib/unitConversion';
+import { useRevenueCat } from '../lib/revenueCat';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -107,6 +108,7 @@ export default function Cookbook() {
   const [currentPage, setCurrentPage] = useState(1);
   const scrollViewRef = useRef<ScrollView>(null);
   const recipesHeaderRef = useRef<View>(null);
+  const { isPremium, presentPaywallIfNeeded } = useRevenueCat();
 
   // Form state
   const [name, setName] = useState('');
@@ -682,7 +684,14 @@ export default function Cookbook() {
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity
-              onPress={() => setShowUrlImport(true)}
+              onPress={async () => {
+                if (isPremium) {
+                  setShowUrlImport(true);
+                } else {
+                  const purchased = await presentPaywallIfNeeded();
+                  if (purchased) setShowUrlImport(true);
+                }
+              }}
               accessible={true}
               accessibilityLabel="Import recipe from URL"
               accessibilityRole="button"
@@ -698,9 +707,17 @@ export default function Cookbook() {
               }}>
               <Ionicons name="link" size={18} color={isDark ? '#ffffff' : '#000000'} />
               <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>URL</Text>
+              {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => setShowScanner(true)}
+              onPress={async () => {
+                if (isPremium) {
+                  setShowScanner(true);
+                } else {
+                  const purchased = await presentPaywallIfNeeded();
+                  if (purchased) setShowScanner(true);
+                }
+              }}
               accessible={true}
               accessibilityLabel="Scan a recipe with camera"
               accessibilityRole="button"
@@ -716,6 +733,7 @@ export default function Cookbook() {
               }}>
               <Ionicons name="camera" size={18} color={isDark ? '#ffffff' : '#000000'} />
               <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>Scan</Text>
+              {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setShowForm(true)}

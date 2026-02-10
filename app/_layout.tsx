@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { initializeDatabase } from '../lib/storage';
 import { Ionicons } from '@expo/vector-icons';
+import { RevenueCatProvider } from '../lib/revenueCat';
 
 export default function TabLayout() {
   const [colorScheme, setColorScheme] = useState(Appearance.getColorScheme());
 
   useEffect(() => {
-    // console.log('_layout.tsx initializing database');
     initializeDatabase().then(() => {});
 
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
@@ -21,7 +21,7 @@ export default function TabLayout() {
   const isDark = colorScheme === 'dark';
 
   return (
-    <>
+    <RevenueCatProvider>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <Tabs
         screenOptions={{
@@ -81,6 +81,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </>
+    </RevenueCatProvider>
   );
 }
