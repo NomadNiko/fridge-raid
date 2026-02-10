@@ -77,13 +77,9 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
     init();
 
     // Listen for customer info changes (purchases, renewals, etc.)
-    const listener = Purchases.addCustomerInfoUpdateListener((info) => {
+    Purchases.addCustomerInfoUpdateListener((info) => {
       setCustomerInfo(info);
     });
-
-    return () => {
-      listener.remove();
-    };
   }, []);
 
   const presentPaywall = useCallback(async (): Promise<boolean> => {

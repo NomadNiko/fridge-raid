@@ -6,6 +6,7 @@ import {
   useColorScheme,
   ActivityIndicator,
   ScrollView,
+  Share,
 } from 'react-native';
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';
@@ -277,6 +278,43 @@ export default function Fridge() {
     }
   };
 
+  const handleExportShoppingList = async () => {
+    if (shoppingList.length === 0) return;
+
+    const today = new Date().toLocaleDateString();
+
+    // Get unique recipe names from shopping list entries
+    const recipeNames = Array.from(
+      new Set(shoppingList.flatMap((item) => item.entries.map((entry) => entry.recipeName)))
+    ).sort();
+
+    const listText = shoppingList
+      .map((item) => {
+        const totalText =
+          item.totalsByUnit.length > 0
+            ? ` — ${item.totalsByUnit
+                .map((t) => {
+                  const c = convertUnit(t.total, t.unit, unitSystem);
+                  return `${formatAmount(c.amount)}${c.unit && c.unit !== 'whole' ? ` ${c.unit}` : ''}`;
+                })
+                .join(', ')}`
+            : '';
+        return `• ${item.name}${totalText}`;
+      })
+      .join('\n');
+
+    const shareText = `Shopping List - ${today}\n\nFor recipes:\n${recipeNames.map((name) => `• ${name}`).join('\n')}\n\nIngredients:\n${listText}`;
+
+    try {
+      await Share.share({
+        message: shareText,
+        title: 'Shopping List',
+      });
+    } catch (error) {
+      console.error('Error sharing shopping list:', error);
+    }
+  };
+
   if (loading) {
     return (
       <View
@@ -385,28 +423,55 @@ export default function Fridge() {
         </View>
 
         <View style={{ paddingHorizontal: 16 }}>
-          <TouchableOpacity
-            onPress={() => setShoppingExpanded(!shoppingExpanded)}
+          <View
             style={{
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
               marginBottom: 8,
             }}>
-            <Text
+            <TouchableOpacity
+              onPress={() => setShoppingExpanded(!shoppingExpanded)}
               style={{
-                color: isDark ? '#ffffff' : '#000000',
-                fontSize: 18,
-                fontWeight: '600',
+                flexDirection: 'row',
+                alignItems: 'center',
+                flex: 1,
               }}>
-              Shopping List ({shoppingList.length})
-            </Text>
-            <Ionicons
-              name={shoppingExpanded ? 'chevron-up' : 'chevron-down'}
-              size={24}
-              color={isDark ? '#ffffff' : '#000000'}
-            />
-          </TouchableOpacity>
+              <Text
+                style={{
+                  color: isDark ? '#ffffff' : '#000000',
+                  fontSize: 18,
+                  fontWeight: '600',
+                  marginRight: 8,
+                }}>
+                Shopping List ({shoppingList.length})
+              </Text>
+              <Ionicons
+                name={shoppingExpanded ? 'chevron-up' : 'chevron-down'}
+                size={24}
+                color={isDark ? '#ffffff' : '#000000'}
+              />
+            </TouchableOpacity>
+            {shoppingList.length > 0 && (
+              <TouchableOpacity
+                onPress={handleExportShoppingList}
+                accessible={true}
+                accessibilityLabel="Export shopping list"
+                accessibilityRole="button"
+                style={{
+                  backgroundColor: '#007aff',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                }}>
+                <Ionicons name="share-outline" size={16} color="#ffffff" />
+                <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '600' }}>Export</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           {shoppingExpanded &&
             (shoppingList.length === 0 ? (
               <View style={{ alignItems: 'center', marginVertical: 20 }}>
