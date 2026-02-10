@@ -43,19 +43,26 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
     customerInfo?.entitlements.active[ENTITLEMENT_ID] !== undefined;
 
   useEffect(() => {
+    const listener = (info: CustomerInfo) => {
+      setCustomerInfo(info);
+    };
+
     const init = async () => {
       try {
-        if (__DEV__) {
-          Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-        }
-
         const apiKey = Constants.expoConfig?.extra?.revenueCatApiKey;
         if (!apiKey || (Platform.OS !== 'ios' && Platform.OS !== 'android')) {
           console.warn('RevenueCat: No API key or unsupported platform');
+          setIsReady(true);
           return;
         }
 
+        if (__DEV__) {
+          Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+        }
         Purchases.configure({ apiKey });
+
+        // Listen for customer info changes (purchases, renewals, etc.)
+        Purchases.addCustomerInfoUpdateListener(listener);
 
         // Fetch initial customer info
         const info = await Purchases.getCustomerInfo();
@@ -76,10 +83,9 @@ export function RevenueCatProvider({ children }: { children: React.ReactNode }) 
 
     init();
 
-    // Listen for customer info changes (purchases, renewals, etc.)
-    Purchases.addCustomerInfoUpdateListener((info) => {
-      setCustomerInfo(info);
-    });
+    return () => {
+      Purchases.removeCustomerInfoUpdateListener(listener);
+    };
   }, []);
 
   const presentPaywall = useCallback(async (): Promise<boolean> => {

@@ -124,6 +124,8 @@ export default function Settings() {
             marginBottom: 16,
           }}>
           <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
             style={{
               color: isDark ? '#ffffff' : '#000000',
               fontSize: 18,
@@ -157,7 +159,7 @@ export default function Settings() {
             </Text>
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
+            <Text maxFontSizeMultiplier={1.2} style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14, flexShrink: 1 }}>
               Custom Ingredients:
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -182,6 +184,8 @@ export default function Settings() {
             marginBottom: 16,
           }}>
           <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
             style={{
               color: isDark ? '#ffffff' : '#000000',
               fontSize: 18,
@@ -191,6 +195,8 @@ export default function Settings() {
             Preferences
           </Text>
           <Text
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.2}
             style={{
               color: isDark ? '#8e8e93' : '#636366',
               fontSize: 14,
@@ -207,10 +213,14 @@ export default function Settings() {
                   flex: 1,
                   backgroundColor: unitSystem === sys ? '#007aff' : isDark ? '#2c2c2e' : '#e5e5ea',
                   paddingVertical: 10,
+                  paddingHorizontal: 4,
                   borderRadius: 10,
                   alignItems: 'center',
                 }}>
                 <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit={true}
+                  maxFontSizeMultiplier={1.2}
                   style={{
                     color: unitSystem === sys ? '#ffffff' : isDark ? '#ffffff' : '#000000',
                     fontWeight: '600',
@@ -265,18 +275,36 @@ export default function Settings() {
           </View>
 
           {isPremium ? (
-            <Pressable
-              onPress={handleManageSubscription}
-              style={{
-                backgroundColor: '#007aff',
-                borderRadius: 10,
-                paddingVertical: 12,
-                alignItems: 'center',
-              }}>
-              <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 16 }}>
-                Manage Subscription
-              </Text>
-            </Pressable>
+            <View style={{ gap: 8 }}>
+              <Pressable
+                onPress={handleManageSubscription}
+                style={{
+                  backgroundColor: '#007aff',
+                  borderRadius: 10,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                }}>
+                <Text style={{ color: '#ffffff', fontWeight: '600', fontSize: 16 }}>
+                  Manage Subscription
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSupportPress}
+                style={{
+                  backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                  borderRadius: 10,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  flexDirection: 'row',
+                  justifyContent: 'center',
+                  gap: 8,
+                }}>
+                <Ionicons name="chatbubble-ellipses-outline" size={18} color={isDark ? '#ffffff' : '#000000'} />
+                <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600', fontSize: 16 }}>
+                  Contact Support
+                </Text>
+              </Pressable>
+            </View>
           ) : (
             <View style={{ gap: 8 }}>
               <Pressable
@@ -352,14 +380,14 @@ export default function Settings() {
               alignItems: 'center',
               justifyContent: 'space-between',
             }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <Ionicons
                 name="help-circle-outline"
                 size={24}
                 color="#007aff"
                 style={{ marginRight: 12 }}
               />
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
+              <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, flexShrink: 1 }}>
                 Support & Help
               </Text>
             </View>
@@ -377,14 +405,14 @@ export default function Settings() {
               alignItems: 'center',
               justifyContent: 'space-between',
             }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <Ionicons
                 name="shield-checkmark-outline"
                 size={24}
                 color="#007aff"
                 style={{ marginRight: 12 }}
               />
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
+              <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, flexShrink: 1 }}>
                 Privacy Policy
               </Text>
             </View>
@@ -402,14 +430,14 @@ export default function Settings() {
               alignItems: 'center',
               justifyContent: 'space-between',
             }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <Ionicons
                 name="document-text-outline"
                 size={24}
                 color="#007aff"
                 style={{ marginRight: 12 }}
               />
-              <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
+              <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, flexShrink: 1 }}>
                 Terms of Use
               </Text>
             </View>
@@ -439,14 +467,14 @@ export default function Settings() {
               alignItems: 'center',
               justifyContent: 'space-between',
             }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
               <Ionicons
                 name="trash-outline"
                 size={24}
                 color="#ff3b30"
                 style={{ marginRight: 12 }}
               />
-              <Text style={{ color: '#ff3b30', fontSize: 16 }}>Reset All Data</Text>
+              <Text numberOfLines={1} maxFontSizeMultiplier={1.2} style={{ color: '#ff3b30', fontSize: 16, flexShrink: 1 }}>Reset All Data</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={isDark ? '#8e8e93' : '#636366'} />
           </Pressable>
@@ -489,7 +517,7 @@ export default function Settings() {
               borderBottomWidth: 1,
               borderBottomColor: isDark ? '#1c1c1e' : '#e5e5ea',
             }}>
-            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 18, fontWeight: '600' }}>
+            <Text numberOfLines={1} adjustsFontSizeToFit={true} maxFontSizeMultiplier={1.2} style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 18, fontWeight: '600', flexShrink: 1 }}>
               Custom Ingredients ({customIngredients.length})
             </Text>
             <Pressable onPress={() => setShowIngredientsModal(false)}>

@@ -201,6 +201,8 @@ export default function Search() {
                 marginBottom: 8,
               }}>
               <Text
+                numberOfLines={1}
+                maxFontSizeMultiplier={1.2}
                 style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '600' }}>
                 Filters
               </Text>
@@ -349,6 +351,9 @@ export default function Search() {
             )}
             {!search.trim() && recipes.length > 0 && (
               <Text
+                numberOfLines={1}
+                adjustsFontSizeToFit={true}
+                maxFontSizeMultiplier={1.2}
                 style={{
                   color: isDark ? '#8e8e93' : '#636366',
                   fontSize: 16,
