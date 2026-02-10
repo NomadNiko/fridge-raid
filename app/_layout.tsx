@@ -3,7 +3,7 @@ import { Appearance } from 'react-native';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { initializeDatabase } from '../lib/storage';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { RevenueCatProvider } from '../lib/revenueCat';
 
 export default function TabLayout() {
@@ -41,7 +41,9 @@ export default function TabLayout() {
           name="index"
           options={{
             title: 'Search',
-            tabBarIcon: ({ color, size }) => <Ionicons name="search" size={size} color={color} />,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="search" size={size - 3} color={color} />
+            ),
           }}
         />
         <Tabs.Screen
@@ -49,7 +51,7 @@ export default function TabLayout() {
           options={{
             title: 'Fridge',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="cube-outline" size={size} color={color} />
+              <MaterialCommunityIcons name="fridge-variant-outline" size={size - 3} color={color} />
             ),
           }}
         />
@@ -67,7 +69,7 @@ export default function TabLayout() {
           options={{
             title: 'Cookbook',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="book-outline" size={size} color={color} />
+              <Ionicons name="book-outline" size={size - 3} color={color} />
             ),
           }}
         />
@@ -76,7 +78,7 @@ export default function TabLayout() {
           options={{
             title: 'Settings',
             tabBarIcon: ({ color, size }) => (
-              <Ionicons name="settings-outline" size={size} color={color} />
+              <Ionicons name="settings-outline" size={size - 3} color={color} />
             ),
           }}
         />

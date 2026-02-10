@@ -1054,6 +1054,84 @@ export default function Cookbook() {
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff' }}>
       <ScrollView ref={scrollViewRef} contentContainerStyle={{ padding: 16 }}>
+        {/* Add Recipe Buttons */}
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+          <TouchableOpacity
+            onPress={async () => {
+              if (isPremium) {
+                setShowUrlImport(true);
+              } else {
+                const purchased = await presentPaywallIfNeeded();
+                if (purchased) setShowUrlImport(true);
+              }
+            }}
+            accessible={true}
+            accessibilityLabel="Import recipe from URL"
+            accessibilityRole="button"
+            style={{
+              flex: 1,
+              backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+              paddingVertical: 10,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+            }}>
+            <Ionicons name="link" size={18} color={isDark ? '#ffffff' : '#000000'} />
+            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>
+              URL
+            </Text>
+            {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={async () => {
+              if (isPremium) {
+                setShowScanner(true);
+              } else {
+                const purchased = await presentPaywallIfNeeded();
+                if (purchased) setShowScanner(true);
+              }
+            }}
+            accessible={true}
+            accessibilityLabel="Scan a recipe with camera"
+            accessibilityRole="button"
+            style={{
+              flex: 1,
+              backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+              paddingVertical: 10,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+            }}>
+            <Ionicons name="camera" size={18} color={isDark ? '#ffffff' : '#000000'} />
+            <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>
+              Scan
+            </Text>
+            {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setShowForm(true)}
+            accessible={true}
+            accessibilityLabel="Add recipe manually"
+            accessibilityRole="button"
+            style={{
+              flex: 1,
+              backgroundColor: '#007aff',
+              paddingVertical: 10,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+            }}>
+            <Ionicons name="add" size={18} color="#ffffff" />
+            <Text style={{ color: '#ffffff', fontWeight: '600' }}>Add</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* My Cookbook Section */}
         <View ref={cookbookHeaderRef} style={{ marginBottom: 12 }}>
           <TouchableOpacity
@@ -1062,7 +1140,6 @@ export default function Cookbook() {
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: 12,
             }}>
             <Text
               style={{
@@ -1078,84 +1155,6 @@ export default function Cookbook() {
               color={isDark ? '#ffffff' : '#000000'}
             />
           </TouchableOpacity>
-          {cookbookExpanded && (
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity
-                onPress={async () => {
-                  if (isPremium) {
-                    setShowUrlImport(true);
-                  } else {
-                    const purchased = await presentPaywallIfNeeded();
-                    if (purchased) setShowUrlImport(true);
-                  }
-                }}
-                accessible={true}
-                accessibilityLabel="Import recipe from URL"
-                accessibilityRole="button"
-                style={{
-                  flex: 1,
-                  backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
-                  paddingVertical: 10,
-                  borderRadius: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                }}>
-                <Ionicons name="link" size={18} color={isDark ? '#ffffff' : '#000000'} />
-                <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>
-                  URL
-                </Text>
-                {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={async () => {
-                  if (isPremium) {
-                    setShowScanner(true);
-                  } else {
-                    const purchased = await presentPaywallIfNeeded();
-                    if (purchased) setShowScanner(true);
-                  }
-                }}
-                accessible={true}
-                accessibilityLabel="Scan a recipe with camera"
-                accessibilityRole="button"
-                style={{
-                  flex: 1,
-                  backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
-                  paddingVertical: 10,
-                  borderRadius: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                }}>
-                <Ionicons name="camera" size={18} color={isDark ? '#ffffff' : '#000000'} />
-                <Text style={{ color: isDark ? '#ffffff' : '#000000', fontWeight: '600' }}>
-                  Scan
-                </Text>
-                {!isPremium && <Ionicons name="lock-closed" size={14} color="#ff9500" />}
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setShowForm(true)}
-                accessible={true}
-                accessibilityLabel="Add recipe manually"
-                accessibilityRole="button"
-                style={{
-                  flex: 1,
-                  backgroundColor: '#007aff',
-                  paddingVertical: 10,
-                  borderRadius: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                }}>
-                <Ionicons name="add" size={18} color="#ffffff" />
-                <Text style={{ color: '#ffffff', fontWeight: '600' }}>Add</Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
 
         {cookbookExpanded && (
