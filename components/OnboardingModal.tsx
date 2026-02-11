@@ -9,7 +9,7 @@ import {
   Dimensions,
   ViewToken,
 } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -21,6 +21,7 @@ type Slide = {
   description: string;
   bgColor?: string;
   borderColor?: string;
+  tintColor?: string;
 };
 
 const slides: Slide[] = [
@@ -32,23 +33,25 @@ const slides: Slide[] = [
   },
   {
     id: 'fridge',
-    icon: <MaterialCommunityIcons name="fridge-variant-outline" size={80} color="#34c759" />,
+    image: require('../assets/stock-your-fridge-icon.png'),
     title: 'Stock Your Fridge',
     description: "Add ingredients you have at home.\nWe'll match them to hundreds of recipes.",
     bgColor: '#4a4a4c',
     borderColor: '#3a3a3c',
+    tintColor: '#34c759',
   },
   {
     id: 'discover',
-    icon: <Ionicons name="book-outline" size={80} color="#0051a8" />,
+    image: require('../assets/discover-and-cook-icon.png'),
     title: 'Discover & Cook',
     description: "Save recipes to your Cookbook.\nGet a Shopping List of what's missing.",
     bgColor: '#585858',
     borderColor: '#484848',
+    tintColor: '#0051a8',
   },
   {
     id: 'start',
-    icon: <Ionicons name="arrow-forward-circle-outline" size={80} color="#ff9500" />,
+    icon: <Ionicons name="checkmark-circle-outline" size={80} color="#34c759" />,
     title: 'Get Started',
     description: "Head to the Fridge tab and add ingredients. \n We'll handle the rest!",
     bgColor: '#666666',
@@ -97,16 +100,21 @@ export default function OnboardingModal({ visible, onComplete }: Props) {
             width: 140,
             height: 140,
             borderRadius: 32,
-            backgroundColor: '#3c3c3e',
+            backgroundColor: item.bgColor || '#3c3c3e',
             borderWidth: 3,
-            borderColor: '#2c2c2e',
+            borderColor: item.borderColor || '#2c2c2e',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 32,
           }}>
           <Image
             source={item.image}
-            style={{ width: 100, height: 100, borderRadius: 22 }}
+            style={{
+              width: 100,
+              height: 100,
+              borderRadius: 22,
+              ...(item.tintColor ? { tintColor: item.tintColor } : {}),
+            }}
             resizeMode="contain"
           />
         </View>

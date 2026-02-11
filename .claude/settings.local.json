@@ -16,7 +16,8 @@
       "WebFetch(domain:www.revenuecat.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:unpkg.com)",
-      "Bash(del \"c:\\\\Users\\\\admin\\\\scraping\\\\fridge-raid-scraper\\\\scripts\\\\test-suggestions.js\")"
+      "Bash(del \"c:\\\\Users\\\\admin\\\\scraping\\\\fridge-raid-scraper\\\\scripts\\\\test-suggestions.js\")",
+      "Bash(findstr:*)"
     ]
   }
 }
