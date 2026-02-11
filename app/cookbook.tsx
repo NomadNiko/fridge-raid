@@ -47,31 +47,39 @@ const computeRecipeSuggestions = (
   fridgeIngs: Parameters<typeof hasIngredient>[1]
 ) => {
   const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
+    const total = recipe.ingredients.length;
     const haveCount = recipe.ingredients.filter((ing: { name: string }) =>
       hasIngredient(ing.name, fridgeIngs)
     ).length;
-    const missingCount = recipe.ingredients.filter(
-      (ing: { name: string }) =>
-        !hasIngredient(ing.name, fridgeIngs) &&
-        !isSpiceOrHerb(ing.name, ingredientsData)
+    const missingCount = total - haveCount;
+    // For ranking: calculate % based on core (non-spice) ingredients only
+    const coreIngredients = recipe.ingredients.filter(
+      (ing: { name: string }) => !isSpiceOrHerb(ing.name, ingredientsData)
+    );
+    const coreTotal = coreIngredients.length;
+    const coreHave = coreIngredients.filter((ing: { name: string }) =>
+      hasIngredient(ing.name, fridgeIngs)
     ).length;
-    // Count matched key ingredients (meat, seafood, produce) for priority sorting
+    const matchPct = coreTotal > 0 ? coreHave / coreTotal : 0;
+    // Count matched key ingredients for tiebreaking
     const keyMatchCount = recipe.ingredients.filter(
       (ing: { name: string }) =>
         hasIngredient(ing.name, fridgeIngs) &&
         isKeyIngredient(ing.name, ingredientsData)
     ).length;
-    return { recipe, haveCount, missingCount, keyMatchCount };
+    return { recipe, haveCount, missingCount, matchPct, keyMatchCount };
   });
 
-  return recipesWithMissing
-    .filter((item: any) => item.haveCount > 0)
-    .sort((a: any, b: any) => {
-      // Prioritize recipes matching key ingredients (meat, seafood, produce)
-      if (b.keyMatchCount !== a.keyMatchCount) return b.keyMatchCount - a.keyMatchCount;
-      return a.missingCount - b.missingCount;
-    })
-    .slice(0, 50);
+  const sortFn = (a: any, b: any) => {
+    if (b.matchPct !== a.matchPct) return b.matchPct - a.matchPct;
+    return b.keyMatchCount - a.keyMatchCount;
+  };
+
+  const hasAny = recipesWithMissing.filter((item: any) => item.haveCount > 0);
+  const topMatches = hasAny.filter((item: any) => item.haveCount / item.recipe.ingredients.length >= 0.65);
+  const rest = hasAny.filter((item: any) => item.haveCount / item.recipe.ingredients.length < 0.65);
+
+  return [...topMatches.sort(sortFn), ...rest.sort(sortFn)].slice(0, 50);
 };
 
 // Parse fraction strings (like "½", "1/2", "1 ½") to decimal numbers
@@ -1194,8 +1202,7 @@ export default function Cookbook() {
                     const recipeObj = convertToRecipe(recipe);
                     const missingCount = recipeObj.ingredients.filter(
                       (ing: { name: string }) =>
-                        !hasIngredient(ing.name, fridgeIngredients) &&
-                        !isSpiceOrHerb(ing.name, ingredientsData)
+                        !hasIngredient(ing.name, fridgeIngredients)
                     ).length;
                     return (
                       <View
@@ -1544,8 +1551,7 @@ export default function Cookbook() {
                   if (!recipe) return null;
                   const missingCount = recipe.ingredients.filter(
                     (ing: { name: string }) =>
-                      !hasIngredient(ing.name, fridgeIngredients) &&
-                      !isSpiceOrHerb(ing.name, ingredientsData)
+                      !hasIngredient(ing.name, fridgeIngredients)
                   ).length;
                   return renderCollectionCard(recipe, missingCount, item);
                 })}
