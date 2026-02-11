@@ -64,6 +64,7 @@ export default function RecipeDetailModal({
   const [fridgeIngredients, setFridgeIngredients] = useState<Ingredient[]>([]);
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [expandedIngredients, setExpandedIngredients] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (visible) {
@@ -253,28 +254,70 @@ export default function RecipeDetailModal({
               const hasIng = hasIngredient(ing.name, fridgeIngredients);
               const displayAmount = ing.amount ? ing.amount * multiplier : 0;
               const converted = convertUnit(displayAmount, ing.unit, unitSystem);
+              const matchedIngredient = fridgeIngredients.find((fi) => 
+                fi.name.toLowerCase() === ing.name.toLowerCase() ||
+                fi.alternativeNames?.some((alt: string) => alt.toLowerCase() === ing.name.toLowerCase())
+              );
+              const hasAltNames = matchedIngredient?.alternativeNames && matchedIngredient.alternativeNames.length > 0;
+              const isExpanded = expandedIngredients.has(idx);
               return (
-                <View
-                  key={idx}
-                  style={{ flexDirection: 'row', marginBottom: 8, alignItems: 'center' }}>
-                  {!hasIng && (
-                    <Ionicons name="close" size={16} color="#ff3b30" style={{ marginRight: 4 }} />
+                <View key={idx} style={{ marginBottom: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {!hasIng && (
+                      <Ionicons name="close" size={16} color="#ff3b30" style={{ marginRight: 4 }} />
+                    )}
+                    {hasIng && (
+                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', marginRight: 8 }}>•</Text>
+                    )}
+                    <Text
+                      style={{
+                        color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
+                        flex: 1,
+                        fontStyle: hasIng ? 'normal' : 'italic',
+                      }}>
+                      {converted.amount ? `${formatAmount(converted.amount)} ` : ''}
+                      {converted.unit && converted.unit !== 'whole' ? `${converted.unit} ` : ''}
+                      {ing.name}
+                      {ing.preparation && `, ${ing.preparation}`}
+                      {ing.optional && ' (optional)'}
+                    </Text>
+                    {hasAltNames && (
+                      <TouchableOpacity
+                        onPress={() => {
+                          setExpandedIngredients((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(idx)) {
+                              next.delete(idx);
+                            } else {
+                              next.add(idx);
+                            }
+                            return next;
+                          });
+                        }}
+                        style={{ marginLeft: 8 }}>
+                        <Ionicons name="information-circle-outline" size={20} color="#8e8e93" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {isExpanded && hasAltNames && (
+                    <View
+                      style={{
+                        backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                        padding: 8,
+                        borderRadius: 6,
+                        marginTop: 4,
+                        marginLeft: 20,
+                      }}>
+                      <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 11, marginBottom: 4 }}>
+                        Also known as:
+                      </Text>
+                      {matchedIngredient.alternativeNames?.map((alt: string, altIdx: number) => (
+                        <Text key={altIdx} style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 13, marginBottom: 1 }}>
+                          • {alt}
+                        </Text>
+                      ))}
+                    </View>
                   )}
-                  {hasIng && (
-                    <Text style={{ color: isDark ? '#8e8e93' : '#636366', marginRight: 8 }}>•</Text>
-                  )}
-                  <Text
-                    style={{
-                      color: hasIng ? (isDark ? '#ffffff' : '#000000') : '#ff3b30',
-                      flex: 1,
-                      fontStyle: hasIng ? 'normal' : 'italic',
-                    }}>
-                    {converted.amount ? `${formatAmount(converted.amount)} ` : ''}
-                    {converted.unit && converted.unit !== 'whole' ? `${converted.unit} ` : ''}
-                    {ing.name}
-                    {ing.preparation && `, ${ing.preparation}`}
-                    {ing.optional && ' (optional)'}
-                  </Text>
                 </View>
               );
             }

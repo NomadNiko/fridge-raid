@@ -33,13 +33,46 @@ import RecipeScannerModal from '../components/RecipeScannerModal';
 import UrlImportModal from '../components/UrlImportModal';
 import { Recipe } from '../types';
 import { Ingredient } from '../types/ingredient';
-import { hasIngredient } from '../lib/ingredientMatcher';
+import { hasIngredient, isSpiceOrHerb, isKeyIngredient } from '../lib/ingredientMatcher';
+import { ingredientsData } from '../lib/data/ingredients';
 import { getRecipeImage } from '../lib/images';
 import { UnitSystem, getUnitSystem, convertUnit } from '../lib/unitConversion';
 import { useRevenueCat } from '../lib/revenueCat';
 
 const ITEMS_PER_PAGE = 10;
 const MULTIPLIER_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3];
+
+const computeRecipeSuggestions = (
+  recipesNotInCollection: Recipe[],
+  fridgeIngs: Parameters<typeof hasIngredient>[1]
+) => {
+  const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
+    const haveCount = recipe.ingredients.filter((ing: { name: string }) =>
+      hasIngredient(ing.name, fridgeIngs)
+    ).length;
+    const missingCount = recipe.ingredients.filter(
+      (ing: { name: string }) =>
+        !hasIngredient(ing.name, fridgeIngs) &&
+        !isSpiceOrHerb(ing.name, ingredientsData)
+    ).length;
+    // Count matched key ingredients (meat, seafood, produce) for priority sorting
+    const keyMatchCount = recipe.ingredients.filter(
+      (ing: { name: string }) =>
+        hasIngredient(ing.name, fridgeIngs) &&
+        isKeyIngredient(ing.name, ingredientsData)
+    ).length;
+    return { recipe, haveCount, missingCount, keyMatchCount };
+  });
+
+  return recipesWithMissing
+    .filter((item: any) => item.haveCount > 0)
+    .sort((a: any, b: any) => {
+      // Prioritize recipes matching key ingredients (meat, seafood, produce)
+      if (b.keyMatchCount !== a.keyMatchCount) return b.keyMatchCount - a.keyMatchCount;
+      return a.missingCount - b.missingCount;
+    })
+    .slice(0, 50);
+};
 
 // Parse fraction strings (like "½", "1/2", "1 ½") to decimal numbers
 const parseFractionAmount = (amount: string): number => {
@@ -134,6 +167,9 @@ export default function Cookbook() {
   const [cookbookExpanded, setCookbookExpanded] = useState(true);
   const [collectionExpanded, setCollectionExpanded] = useState(true);
   const [suggestedExpanded, setSuggestedExpanded] = useState(true);
+  const [suggestedFiltersVisible, setSuggestedFiltersVisible] = useState(false);
+  const [suggestedCuisine, setSuggestedCuisine] = useState<string | null>(null);
+  const [suggestedMealType, setSuggestedMealType] = useState<string | null>(null);
   const [cookbookPage, setCookbookPage] = useState(1);
   const [collectionPage, setCollectionPage] = useState(1);
   const [suggestedPage, setSuggestedPage] = useState(1);
@@ -183,22 +219,7 @@ export default function Cookbook() {
       (recipe: Recipe) => !collectionRecipeIds.includes(recipe.id)
     );
 
-    const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
-      const haveCount = recipe.ingredients.filter((ing: { name: string }) =>
-        hasIngredient(ing.name, fridgeIngs)
-      ).length;
-      const missingCount = recipe.ingredients.filter(
-        (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngs)
-      ).length;
-      return { recipe, haveCount, missingCount };
-    });
-
-    const sorted = recipesWithMissing
-      .filter((item: any) => item.haveCount > 0)
-      .sort((a: any, b: any) => a.missingCount - b.missingCount)
-      .slice(0, 50);
-
-    setSuggestedRecipes(sorted);
+    setSuggestedRecipes(computeRecipeSuggestions(recipesNotInCollection, fridgeIngs));
     setLoading(false);
   }, []);
 
@@ -363,22 +384,7 @@ export default function Cookbook() {
         (recipe: Recipe) => !collectionRecipeIds.includes(recipe.id)
       );
 
-      const recipesWithMissing = recipesNotInCollection.map((recipe: Recipe) => {
-        const haveCount = recipe.ingredients.filter((ing: { name: string }) =>
-          hasIngredient(ing.name, fridgeIngs)
-        ).length;
-        const missingCount = recipe.ingredients.filter(
-          (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngs)
-        ).length;
-        return { recipe, haveCount, missingCount };
-      });
-
-      const sorted = recipesWithMissing
-        .filter((item: any) => item.haveCount > 0)
-        .sort((a: any, b: any) => a.missingCount - b.missingCount)
-        .slice(0, 50);
-
-      setSuggestedRecipes(sorted);
+      setSuggestedRecipes(computeRecipeSuggestions(recipesNotInCollection, fridgeIngs));
     } finally {
       toggleInProgress.current.delete(recipeId);
     }
@@ -1049,7 +1055,15 @@ export default function Cookbook() {
   const collectionItems = userCollection.filter((item) => item.recipe);
   const cookbookTotalPages = Math.ceil(recipes.length / ITEMS_PER_PAGE);
   const collectionTotalPages = Math.ceil(collectionItems.length / ITEMS_PER_PAGE);
-  const suggestedTotalPages = Math.ceil(suggestedRecipes.length / ITEMS_PER_PAGE);
+
+  const filteredSuggestedRecipes = suggestedRecipes.filter((item: any) => {
+    if (suggestedCuisine && item.recipe.cuisine !== suggestedCuisine) return false;
+    if (suggestedMealType && item.recipe.mealType !== suggestedMealType) return false;
+    return true;
+  });
+  const suggestedCuisines = Array.from(new Set(suggestedRecipes.map((item: any) => item.recipe.cuisine))).sort() as string[];
+  const suggestedMealTypes = Array.from(new Set(suggestedRecipes.map((item: any) => item.recipe.mealType).filter(Boolean))).sort() as string[];
+  const suggestedTotalPages = Math.ceil(filteredSuggestedRecipes.length / ITEMS_PER_PAGE);
 
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#ffffff' }}>
@@ -1179,7 +1193,9 @@ export default function Cookbook() {
                   .map((recipe) => {
                     const recipeObj = convertToRecipe(recipe);
                     const missingCount = recipeObj.ingredients.filter(
-                      (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
+                      (ing: { name: string }) =>
+                        !hasIngredient(ing.name, fridgeIngredients) &&
+                        !isSpiceOrHerb(ing.name, ingredientsData)
                     ).length;
                     return (
                       <View
@@ -1527,7 +1543,9 @@ export default function Cookbook() {
                   const recipe = item.recipe;
                   if (!recipe) return null;
                   const missingCount = recipe.ingredients.filter(
-                    (ing: { name: string }) => !hasIngredient(ing.name, fridgeIngredients)
+                    (ing: { name: string }) =>
+                      !hasIngredient(ing.name, fridgeIngredients) &&
+                      !isSpiceOrHerb(ing.name, ingredientsData)
                   ).length;
                   return renderCollectionCard(recipe, missingCount, item);
                 })}
@@ -1618,7 +1636,7 @@ export default function Cookbook() {
                 fontSize: 22,
                 fontWeight: '600',
               }}>
-              Suggested Recipes ({suggestedRecipes.length})
+              Suggested Recipes ({filteredSuggestedRecipes.length})
             </Text>
             <Ionicons
               name={suggestedExpanded ? 'chevron-up' : 'chevron-down'}
@@ -1643,7 +1661,164 @@ export default function Cookbook() {
             </View>
           ) : (
             <>
-              {suggestedRecipes
+              <TouchableOpacity
+                onPress={() => setSuggestedFiltersVisible(!suggestedFiltersVisible)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingVertical: 8,
+                  marginBottom: 8,
+                }}>
+                <Text
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.2}
+                  style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16, fontWeight: '600' }}>
+                  Filters
+                </Text>
+                <Ionicons
+                  name={suggestedFiltersVisible ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color={isDark ? '#ffffff' : '#000000'}
+                />
+              </TouchableOpacity>
+              {suggestedFiltersVisible && (
+                <View style={{ marginBottom: 12 }}>
+                  <Text
+                    style={{
+                      color: isDark ? '#8e8e93' : '#636366',
+                      fontSize: 13,
+                      fontWeight: '600',
+                      marginBottom: 6,
+                    }}>
+                    Cuisine
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSuggestedCuisine(null);
+                        setSuggestedPage(1);
+                      }}
+                      style={{
+                        backgroundColor: !suggestedCuisine
+                          ? '#007aff'
+                          : isDark
+                            ? '#1c1c1e'
+                            : '#f2f2f7',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                      }}>
+                      <Text
+                        style={{
+                          color: !suggestedCuisine ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                          fontSize: 14,
+                        }}>
+                        All
+                      </Text>
+                    </TouchableOpacity>
+                    {suggestedCuisines.map((cuisine) => (
+                      <TouchableOpacity
+                        key={cuisine}
+                        onPress={() => {
+                          setSuggestedCuisine(cuisine);
+                          setSuggestedPage(1);
+                        }}
+                        style={{
+                          backgroundColor:
+                            suggestedCuisine === cuisine
+                              ? '#007aff'
+                              : isDark
+                                ? '#1c1c1e'
+                                : '#f2f2f7',
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 16,
+                        }}>
+                        <Text
+                          style={{
+                            color:
+                              suggestedCuisine === cuisine
+                                ? '#ffffff'
+                                : isDark
+                                  ? '#ffffff'
+                                  : '#000000',
+                            fontSize: 14,
+                          }}>
+                          {cuisine}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text
+                    style={{
+                      color: isDark ? '#8e8e93' : '#636366',
+                      fontSize: 13,
+                      fontWeight: '600',
+                      marginBottom: 6,
+                    }}>
+                    Meal Type
+                  </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSuggestedMealType(null);
+                        setSuggestedPage(1);
+                      }}
+                      style={{
+                        backgroundColor: !suggestedMealType
+                          ? '#007aff'
+                          : isDark
+                            ? '#1c1c1e'
+                            : '#f2f2f7',
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                      }}>
+                      <Text
+                        style={{
+                          color: !suggestedMealType ? '#ffffff' : isDark ? '#ffffff' : '#000000',
+                          fontSize: 14,
+                        }}>
+                        All
+                      </Text>
+                    </TouchableOpacity>
+                    {suggestedMealTypes.map((mealType) => (
+                      <TouchableOpacity
+                        key={mealType}
+                        onPress={() => {
+                          setSuggestedMealType(mealType);
+                          setSuggestedPage(1);
+                        }}
+                        style={{
+                          backgroundColor:
+                            suggestedMealType === mealType
+                              ? '#007aff'
+                              : isDark
+                                ? '#1c1c1e'
+                                : '#f2f2f7',
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 16,
+                        }}>
+                        <Text
+                          style={{
+                            color:
+                              suggestedMealType === mealType
+                                ? '#ffffff'
+                                : isDark
+                                  ? '#ffffff'
+                                  : '#000000',
+                            fontSize: 14,
+                          }}>
+                          {mealType}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+              {filteredSuggestedRecipes
                 .slice((suggestedPage - 1) * ITEMS_PER_PAGE, suggestedPage * ITEMS_PER_PAGE)
                 .map((item) => renderCollectionCard(item.recipe, item.missingCount, null))}
               {suggestedTotalPages > 1 && (

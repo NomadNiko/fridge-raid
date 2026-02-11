@@ -19,6 +19,8 @@ type Slide = {
   image?: any;
   title: string;
   description: string;
+  bgColor?: string;
+  borderColor?: string;
 };
 
 const slides: Slide[] = [
@@ -26,25 +28,31 @@ const slides: Slide[] = [
     id: 'welcome',
     image: require('../assets/icon.png'),
     title: 'Welcome to Fridge Raid',
-    description: 'Find recipes with what you have',
+    description: 'Find recipes with what you have. \nCooking doesnt have to be so hard!',
   },
   {
     id: 'fridge',
     icon: <MaterialCommunityIcons name="fridge-variant-outline" size={80} color="#34c759" />,
     title: 'Stock Your Fridge',
-    description: "Add ingredients you have at home.\nWe'll match them to 499+ recipes.",
+    description: "Add ingredients you have at home.\nWe'll match them to hundreds of recipes.",
+    bgColor: '#4a4a4c',
+    borderColor: '#3a3a3c',
   },
   {
     id: 'discover',
-    icon: <Ionicons name="book-outline" size={80} color="#007aff" />,
+    icon: <Ionicons name="book-outline" size={80} color="#0051a8" />,
     title: 'Discover & Cook',
     description: "Save recipes to your Cookbook.\nGet a Shopping List of what's missing.",
+    bgColor: '#585858',
+    borderColor: '#484848',
   },
   {
     id: 'start',
     icon: <Ionicons name="arrow-forward-circle-outline" size={80} color="#ff9500" />,
     title: 'Get Started',
-    description: 'Head to the Fridge tab and\nadd your ingredients!',
+    description: "Head to the Fridge tab and add ingredients. \n We'll handle the rest!",
+    bgColor: '#666666',
+    borderColor: '#565656',
   },
 ];
 
@@ -103,7 +111,20 @@ export default function OnboardingModal({ visible, onComplete }: Props) {
           />
         </View>
       ) : (
-        <View style={{ marginBottom: 32 }}>{item.icon}</View>
+        <View
+          style={{
+            width: 140,
+            height: 140,
+            borderRadius: 32,
+            backgroundColor: item.bgColor || '#3c3c3e',
+            borderWidth: 3,
+            borderColor: item.borderColor || '#2c2c2e',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 32,
+          }}>
+          {item.icon}
+        </View>
       )}
       <Text
         style={{
@@ -185,7 +206,9 @@ export default function OnboardingModal({ visible, onComplete }: Props) {
                 paddingVertical: 14,
                 borderRadius: 12,
               }}>
-              <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '600' }}>{"Let's Go"}</Text>
+              <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '600' }}>
+                {"Let's Go"}
+              </Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity

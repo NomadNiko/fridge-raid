@@ -33,6 +33,7 @@ export default function Fridge() {
   const [allIngredientsExpanded, setAllIngredientsExpanded] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedFridgeItems, setExpandedFridgeItems] = useState<Set<string>>(new Set());
   const toggleInProgress = useRef<Set<number>>(new Set());
 
   const loadData = useCallback(async () => {
@@ -284,35 +285,74 @@ export default function Fridge() {
               </View>
             ) : (
               userFridge.map((item) => {
+                const itemKey = `${item.isCustom ? 'custom' : 'builtin'}-${item.ingredientId}`;
+                const hasAltNames = item.ingredient?.alternativeNames && item.ingredient.alternativeNames.length > 0;
+                const isExpanded = expandedFridgeItems.has(itemKey);
                 return (
-                  <View
-                    key={`${item.isCustom ? 'custom' : 'builtin'}-${item.ingredientId}`}
-                    style={{
-                      backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
-                      padding: 12,
-                      borderRadius: 8,
-                      marginBottom: 8,
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                      <View>
-                        <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
-                          {item.ingredient?.name || 'Unknown'}
-                        </Text>
-                        <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
-                          {item.isCustom ? 'Custom' : item.ingredient?.category || ''}
-                        </Text>
+                  <View key={itemKey} style={{ marginBottom: 8 }}>
+                    <View
+                      style={{
+                        backgroundColor: isDark ? '#1c1c1e' : '#f2f2f7',
+                        padding: 12,
+                        borderRadius: 8,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <View>
+                          <Text style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 16 }}>
+                            {item.ingredient?.name || 'Unknown'}
+                          </Text>
+                          <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 14 }}>
+                            {item.isCustom ? 'Custom' : item.ingredient?.category || ''}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {hasAltNames && (
+                          <TouchableOpacity
+                            onPress={() => {
+                              setExpandedFridgeItems((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(itemKey)) {
+                                  next.delete(itemKey);
+                                } else {
+                                  next.add(itemKey);
+                                }
+                                return next;
+                              });
+                            }}>
+                            <Ionicons name="information-circle-outline" size={24} color="#8e8e93" />
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          onPress={() => handleRemoveFromFridge(item.ingredientId, item.isCustom)}
+                          accessible={true}
+                          accessibilityLabel={`Remove ${item.ingredient?.name || 'ingredient'} from fridge`}
+                          accessibilityRole="button">
+                          <Ionicons name="trash-outline" size={24} color="#ff3b30" />
+                        </TouchableOpacity>
                       </View>
                     </View>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveFromFridge(item.ingredientId, item.isCustom)}
-                      accessible={true}
-                      accessibilityLabel={`Remove ${item.ingredient?.name || 'ingredient'} from fridge`}
-                      accessibilityRole="button">
-                      <Ionicons name="trash-outline" size={24} color="#ff3b30" />
-                    </TouchableOpacity>
+                    {isExpanded && hasAltNames && (
+                      <View
+                        style={{
+                          backgroundColor: isDark ? '#2c2c2e' : '#e5e5ea',
+                          padding: 12,
+                          borderRadius: 8,
+                          marginTop: 4,
+                        }}>
+                        <Text style={{ color: isDark ? '#8e8e93' : '#636366', fontSize: 12, marginBottom: 6 }}>
+                          Also known as:
+                        </Text>
+                        {item.ingredient.alternativeNames.map((alt: string, idx: number) => (
+                          <Text key={idx} style={{ color: isDark ? '#ffffff' : '#000000', fontSize: 14, marginBottom: 2 }}>
+                            • {alt}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
                   </View>
                 );
               })
