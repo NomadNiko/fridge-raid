@@ -1,3 +1,9 @@
+# Fridge Raid
+
+[Website](https://nomadsoft.us/fridge-raid) | [Proposal](https://nomadsoft.us/fridge-raid#proposal) | [Technical Documentation](https://nomadsoft.us/fridge-raid#technical) | [Developer](https://nomadsoft.us/fridge-raid#developer)
+
+---
+
 ## Inspiration
 
 People often have ingredients sitting in their fridge but don't know what to make with them. They also usually have cookbooks gathering dust on the shelf, but it takes a long time to cross reference this with what ingredients you already have.
